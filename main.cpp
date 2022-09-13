@@ -4,40 +4,38 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include "BrowserWindow.h"
-#include "Settings.h"
-#include "WebView.h"
 #include <LibCore/ArgsParser.h>
 #include <LibCore/Timer.h>
 #include <LibMain/Main.h>
-#include <QApplication>
-#include <QWidget>
 
-extern void initialize_web_engine();
-Browser::Settings* s_settings;
+#include <gtk/gtk.h>
+
+/*extern void initialize_web_engine();
+Browser::Settings* s_settings;*/
+
+static void
+app_activate (GApplication *app, gpointer *user_data) {
+    (void) app;
+    (void) user_data;
+
+    g_print ("GtkApplication is activated.\n");
+
+    GtkWidget *window;
+    window = gtk_application_window_new (GTK_APPLICATION (app));
+    gtk_window_set_title (GTK_WINDOW (window), "Ladybird GTK");
+    gtk_window_present (GTK_WINDOW (window));
+}
 
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
-    QApplication app(arguments.argc, arguments.argv);
+    (void) arguments;
 
-    initialize_web_engine();
+    GtkApplication *app;
+    int stat;
 
-    String url;
-    Core::ArgsParser args_parser;
-    args_parser.set_general_help("The Ladybird web browser :^)");
-    args_parser.add_positional_argument(url, "URL to open", "url", Core::ArgsParser::Required::No);
-    args_parser.parse(arguments);
-
-    s_settings = new Browser::Settings();
-
-    BrowserWindow window;
-    window.setWindowTitle("Ladybird");
-    window.resize(800, 600);
-    window.show();
-
-    if (!url.is_empty()) {
-        window.view().load(url);
-    }
-
-    return app.exec();
+    app = gtk_application_new ("com.github.ToshioCP.pr1", G_APPLICATION_FLAGS_NONE);
+    g_signal_connect (app, "activate", G_CALLBACK (app_activate), NULL);
+    stat = g_application_run (G_APPLICATION (app), 0, NULL);
+    g_object_unref (app);
+    return stat;
 }

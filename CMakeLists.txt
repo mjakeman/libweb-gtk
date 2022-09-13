@@ -6,10 +6,6 @@ project(ladybird
     DESCRIPTION "Ladybird Web Browser"
 )
 
-if (ANDROID)
-    set(BUILD_SHARED_LIBS OFF)
-endif()
-
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -39,32 +35,19 @@ include(${Lagom_SOURCE_DIR}/../CMake/lagom_compile_options.cmake)
 add_compile_options(-Wno-expansion-to-defined)
 add_compile_options(-Wno-user-defined-literals)
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GTK4 REQUIRED gtk4)
 
 set(SOURCES
-    BrowserWindow.cpp
-    ConsoleClient.cpp
-    ConsoleGlobalObject.cpp
-    CookieJar.cpp
-    EventLoopPluginQt.cpp
-    FontPluginQt.cpp
-    RequestManagerQt.cpp
     main.cpp
-    WebView.cpp
-    History.cpp
-    Settings.cpp
-    SettingsDialog.cpp
-    Tab.cpp
-    TimerQt.cpp
 )
 
-qt_add_executable(ladybird ${SOURCES}
-    MANUAL_FINALIZATION
-)
-target_link_libraries(ladybird PRIVATE Qt::Widgets Qt::Network LibWeb LibWebSocket LibGL LibMain)
+include_directories(${GTK4_INCLUDE_DIRS})
+link_directories(${GTK4_LIBRARY_DIRS})
+add_definitions(${GTK4_CFLAGS_OTHER})
+
+add_executable(ladybird ${SOURCES})
+target_link_libraries(ladybird PRIVATE ${GTK4_LIBRARIES} LibWeb LibWebSocket LibGL LibMain)
 
 set_target_properties(ladybird PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER org.serenityos.ladybird
@@ -75,10 +58,6 @@ set_target_properties(ladybird PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
 
-if (ANDROID)
-    include(cmake/AndroidExtras.cmake)
-endif()
-
 add_custom_target(run
     COMMAND "${CMAKE_COMMAND}" -E env "SERENITY_SOURCE_DIR=${SERENITY_SOURCE_DIR}" "$<TARGET_FILE:ladybird>"
     USES_TERMINAL
@@ -88,8 +67,6 @@ add_custom_target(debug
     COMMAND "${CMAKE_COMMAND}" -E env "SERENITY_SOURCE_DIR=${SERENITY_SOURCE_DIR}" gdb "$<TARGET_FILE:ladybird>"
     USES_TERMINAL
 )
-
-qt_finalize_executable(ladybird)
 
 install(TARGETS ladybird
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
