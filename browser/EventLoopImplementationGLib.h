@@ -10,16 +10,14 @@
 #include <AK/NonnullOwnPtr.h>
 #include <AK/OwnPtr.h>
 #include <LibCore/EventLoopImplementation.h>
-#include <QEventLoop>
-#include <QSocketNotifier>
-#include <QTimer>
+#include <glib-object.h>
 
 namespace Ladybird {
 
-class EventLoopManagerQt final : public Core::EventLoopManager {
+class EventLoopManagerGLib final : public Core::EventLoopManager {
 public:
-    EventLoopManagerQt();
-    virtual ~EventLoopManagerQt() override;
+    EventLoopManagerGLib();
+    virtual ~EventLoopManagerGLib() override;
     virtual NonnullOwnPtr<Core::EventLoopImplementation> make_implementation() override;
 
     virtual int register_timer(Core::Object&, int milliseconds, bool should_reload, Core::TimerShouldFireWhenNotVisible) override;
@@ -35,14 +33,13 @@ public:
     virtual void unregister_signal(int) override { }
 
 private:
-    QTimer m_process_core_events_timer;
 };
 
-class EventLoopImplementationQt final : public Core::EventLoopImplementation {
+class EventLoopImplementationGLib final : public Core::EventLoopImplementation {
 public:
-    static NonnullOwnPtr<EventLoopImplementationQt> create() { return adopt_own(*new EventLoopImplementationQt); }
+    static NonnullOwnPtr<EventLoopImplementationGLib> create() { return adopt_own(*new EventLoopImplementationGLib); }
 
-    virtual ~EventLoopImplementationQt() override;
+    virtual ~EventLoopImplementationGLib() override;
 
     virtual int exec() override;
     virtual size_t pump(PumpMode) override;
@@ -55,16 +52,16 @@ public:
     virtual bool was_exit_requested() const override { return false; }
     virtual void notify_forked_and_in_child() override { }
 
-    void set_main_loop() { m_main_loop = true; }
+    void set_main_loop() { dbgln("GLib Event Loop only supports being main!"); }
 
 private:
-    friend class EventLoopManagerQt;
+    friend class EventLoopManagerGLib;
 
-    EventLoopImplementationQt();
-    bool is_main_loop() const { return m_main_loop; }
+    EventLoopImplementationGLib();
+    bool is_main_loop() const { return true; }
 
-    QEventLoop m_event_loop;
-    bool m_main_loop { false };
+    GMainLoop *m_event_loop;
+    int m_error_code;
 };
 
 }

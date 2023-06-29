@@ -5,7 +5,7 @@
  */
 
 #include "../AudioCodecPluginLadybird.h"
-#include "../EventLoopImplementationQt.h"
+#include "../EventLoopImplementationGLib.h"
 #include "../FontPluginQt.h"
 #include "../ImageCodecPluginLadybird.h"
 #include "../RequestManagerQt.h"
@@ -52,7 +52,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     prohibit_interaction();
 #endif
 
-    Core::EventLoopManager::install(*new Ladybird::EventLoopManagerQt);
+    Core::EventLoopManager::install(*new Ladybird::EventLoopManagerGLib);
     Core::EventLoop event_loop;
 
     platform_init();

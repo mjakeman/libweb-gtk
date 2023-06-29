@@ -5,7 +5,7 @@
  */
 
 #include "BrowserWindow.h"
-#include "EventLoopImplementationQt.h"
+#include "EventLoopImplementationGLib.h"
 #include "HelperProcess.h"
 #include "Settings.h"
 #include "Utilities.h"
@@ -20,7 +20,7 @@
 #include <LibGfx/Font/FontDatabase.h>
 #include <LibMain/Main.h>
 #include <LibSQL/SQLClient.h>
-#include <QApplication>
+#include <gtk/gtk.h>
 
 AK::OwnPtr<Browser::Settings> s_settings;
 
@@ -52,11 +52,11 @@ static ErrorOr<void> handle_attached_debugger()
 
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
-    QApplication app(arguments.argc, arguments.argv);
+    GtkApplication *app = gtk_application_new("com.mattjakeman.LibWebGTK", G_APPLICATION_DEFAULT_FLAGS);
+    // QApplication app(arguments.argc, arguments.argv);
 
-    Core::EventLoopManager::install(*new Ladybird::EventLoopManagerQt);
-    Core::EventLoop event_loop;
-    static_cast<Ladybird::EventLoopImplementationQt&>(event_loop.impl()).set_main_loop();
+    Core::EventLoopManager::install(*new Ladybird::EventLoopManagerGLib);
+    Core::EventLoop event_loop; // Create main loop
 
     TRY(handle_attached_debugger());
 
@@ -101,29 +101,26 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     auto cookie_jar = database ? TRY(Browser::CookieJar::create(*database)) : Browser::CookieJar::create();
 
     s_settings = adopt_own_if_nonnull(new Browser::Settings());
-    BrowserWindow window(cookie_jar, webdriver_content_ipc_path, enable_callgrind_profiling ? WebView::EnableCallgrindProfiling::Yes : WebView::EnableCallgrindProfiling::No, use_javascript_bytecode ? WebView::UseJavaScriptBytecode::Yes : WebView::UseJavaScriptBytecode::No);
-    window.setWindowTitle("browser");
-    window.resize(800, 600);
-    window.show();
+//    BrowserWindow window(cookie_jar, webdriver_content_ipc_path, enable_callgrind_profiling ? WebView::EnableCallgrindProfiling::Yes : WebView::EnableCallgrindProfiling::No, use_javascript_bytecode ? WebView::UseJavaScriptBytecode::Yes : WebView::UseJavaScriptBytecode::No);
+//    window.setWindowTitle("browser");
+//    window.resize(800, 600);
+//    window.show();
+    GtkWidget *window = gtk_application_window_new(app);
+    gtk_window_set_title(GTK_WINDOW (window), "LibWeb GTK");
+    gtk_window_set_default_size(GTK_WINDOW (window), 800, 600);
+    gtk_window_present(GTK_WINDOW (window));
 
     if (auto url = TRY(get_formatted_url(raw_url)); url.is_valid()) {
-        window.view().load(url);
+        //window.view().load(url);
     } else {
-        window.view().load("about:blank"sv);
+        //window.view().load("about:blank"sv);
     }
 
     return event_loop.exec();
 }
 
-bool is_using_dark_system_theme(QWidget& widget)
+bool is_using_dark_system_theme()
 {
-    // FIXME: Qt does not provide any method to query if the system is using a dark theme. We will have to implement
-    //        platform-specific methods if we wish to have better detection. For now, this inspects if Qt is using a
-    //        dark color for widget backgrounds using Rec. 709 luma coefficients.
-    //        https://en.wikipedia.org/wiki/Rec._709#Luma_coefficients
-
-    auto color = widget.palette().color(widget.backgroundRole());
-    auto luma = 0.2126f * color.redF() + 0.7152f * color.greenF() + 0.0722f * color.blueF();
-
-    return luma <= 0.5f;
+    // TODO: Allow querying libadwaita if present
+    return false;
 }

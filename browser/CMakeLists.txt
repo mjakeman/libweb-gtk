@@ -73,7 +73,13 @@ add_compile_options(-Wno-user-defined-literals)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network Svg Multimedia)
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(GTK4 REQUIRED gtk4)
+
+include_directories(${GTK4_INCLUDE_DIRS})
+link_directories(${GTK4_LIBRARY_DIRS})
+add_definitions(${GTK4_CFLAGS_OTHER})
 
 set(BROWSER_SOURCE_DIR ${SERENITY_SOURCE_DIR}/Userland/Applications/Browser/)
 
@@ -81,40 +87,38 @@ set(SOURCES
     ${BROWSER_SOURCE_DIR}/CookieJar.cpp
     ${BROWSER_SOURCE_DIR}/Database.cpp
     ${BROWSER_SOURCE_DIR}/History.cpp
-    BrowserWindow.cpp
-    ConsoleWidget.cpp
-    EventLoopImplementationQt.cpp
-    HelperProcess.cpp
-    InspectorWidget.cpp
-    LocationEdit.cpp
-    ModelTranslator.cpp
-    Settings.cpp
-    SettingsDialog.cpp
-    Tab.cpp
-    Utilities.cpp
-    WebContentView.cpp
-    ladybird.qrc
+#    BrowserWindow.cpp
+#    ConsoleWidget.cpp
+#    EventLoopImplementationGLib.cpp
+#    HelperProcess.cpp
+#    InspectorWidget.cpp
+#    LocationEdit.cpp
+#    ModelTranslator.cpp
+#    Settings.cpp
+#    SettingsDialog.cpp
+#    Tab.cpp
+#    Utilities.cpp
+#    WebContentView.cpp
+#    ladybird.qrc
     main.cpp
 )
 
-qt_add_executable(ladybird ${SOURCES}
-    MANUAL_FINALIZATION
-)
-target_link_libraries(ladybird PRIVATE Qt::Core Qt::Gui Qt::Network Qt::Widgets Qt::Svg LibCore LibFileSystem LibGfx LibGUI LibIPC LibJS LibMain LibWeb LibWebView LibSQL)
+add_executable(ladybird ${SOURCES})
+target_link_libraries(ladybird PRIVATE ${GTK4_LIBRARIES} LibCore LibFileSystem LibGfx LibGUI LibIPC LibJS LibMain LibWeb LibWebView LibSQL)
 
 target_include_directories(ladybird PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(ladybird PRIVATE ${SERENITY_SOURCE_DIR}/Userland/)
 target_include_directories(ladybird PRIVATE ${SERENITY_SOURCE_DIR}/Userland/Applications/)
 target_include_directories(ladybird PRIVATE ${SERENITY_SOURCE_DIR}/Userland/Services/)
 
-qt_add_executable(headless-browser
-    ${SERENITY_SOURCE_DIR}/Userland/Utilities/headless-browser.cpp
-    ${SERENITY_SOURCE_DIR}/Userland/Services/WebContent/WebDriverConnection.cpp
-    HelperProcess.cpp
-    Utilities.cpp)
+add_executable(headless-browser
+        ${SERENITY_SOURCE_DIR}/Userland/Utilities/headless-browser.cpp
+        ${SERENITY_SOURCE_DIR}/Userland/Services/WebContent/WebDriverConnection.cpp
+        HelperProcess.cpp
+        Utilities.cpp)
 
 target_include_directories(headless-browser PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(headless-browser PRIVATE Qt::Core LibWeb LibWebView LibWebSocket LibCrypto LibFileSystem LibGemini LibHTTP LibJS LibGfx LibMain LibTLS LibIPC LibJS LibDiff)
+target_link_libraries(ladybird PRIVATE ${GTK4_LIBRARIES} LibWeb LibWebView LibWebSocket LibCrypto LibFileSystem LibGemini LibHTTP LibJS LibGfx LibMain LibTLS LibIPC LibJS LibDiff)
 
 set_target_properties(ladybird PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER org.SerenityOS.Ladybird
@@ -141,7 +145,7 @@ add_custom_target(debug${LADYBIRD_CUSTOM_TARGET_SUFFIX}
     USES_TERMINAL
 )
 
-qt_finalize_executable(ladybird)
+#qt_finalize_executable(ladybird)
 
 add_subdirectory(SQLServer)
 add_subdirectory(WebContent)
