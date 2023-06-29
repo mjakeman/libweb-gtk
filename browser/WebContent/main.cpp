@@ -83,7 +83,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 
     VERIFY(webcontent_fd_passing_socket >= 0);
 
-    Web::Platform::FontPlugin::install(*new Ladybird::FontPluginQt(is_layout_test_mode));
+    Web::Platform::FontPlugin::install(*new Ladybird::FontPluginGTK(is_layout_test_mode));
 
     Web::FrameLoader::set_error_page_url(DeprecatedString::formatted("file://{}/res/html/error.html", s_serenity_resource_root));
 
