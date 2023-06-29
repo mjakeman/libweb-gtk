@@ -7,7 +7,7 @@
 #include "HelperProcess.h"
 #include "Utilities.h"
 #include <AK/String.h>
-#include <QCoreApplication>
+#include <gtk/gtk.h>
 
 ErrorOr<void> spawn_helper_process(StringView process_name, ReadonlySpan<StringView> arguments, Core::System::SearchInPath search_in_path, Optional<ReadonlySpan<StringView>> environment)
 {
@@ -24,8 +24,7 @@ ErrorOr<void> spawn_helper_process(StringView process_name, ReadonlySpan<StringV
 }
 
 ErrorOr<Vector<String>> get_paths_for_helper_process(StringView process_name)
-{
-    auto application_path = TRY(ak_string_from_qstring(QCoreApplication::applicationDirPath()));
+    auto application_path = TRY(ak_string_from_cstring(g_get_current_dir()));
     Vector<String> paths;
 
     TRY(paths.try_append(TRY(String::formatted("./{}/{}", process_name, process_name))));

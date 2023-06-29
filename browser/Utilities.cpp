@@ -8,30 +8,30 @@
 #include <AK/LexicalPath.h>
 #include <AK/Platform.h>
 #include <LibFileSystem/FileSystem.h>
-#include <QCoreApplication>
+#include <glib-object.h>
 
 DeprecatedString s_serenity_resource_root;
 
-AK::DeprecatedString ak_deprecated_string_from_qstring(QString const& qstring)
+AK::DeprecatedString ak_deprecated_string_from_cstring(const char *cstring)
 {
-    return AK::DeprecatedString(qstring.toUtf8().data());
+    return AK::DeprecatedString(cstring);
 }
 
-ErrorOr<String> ak_string_from_qstring(QString const& qstring)
+ErrorOr<String> ak_string_from_cstring(const char *cstring)
 {
-    return String::from_utf8(StringView(qstring.toUtf8().data(), qstring.size()));
+    return String::from_utf8(StringView(cstring, strlen(cstring)));
 }
 
-QString qstring_from_ak_deprecated_string(AK::DeprecatedString const& ak_deprecated_string)
-{
-    return QString::fromUtf8(ak_deprecated_string.characters(), ak_deprecated_string.length());
-}
+//QString qstring_from_ak_deprecated_string(AK::DeprecatedString const& ak_deprecated_string)
+//{
+//    return QString::fromUtf8(ak_deprecated_string.characters(), ak_deprecated_string.length());
+//}
 
-QString qstring_from_ak_string(String const& ak_string)
-{
-    auto view = ak_string.bytes_as_string_view();
-    return QString::fromUtf8(view.characters_without_null_termination(), view.length());
-}
+//QString qstring_from_ak_string(String const& ak_string)
+//{
+//    auto view = ak_string.bytes_as_string_view();
+//    return QString::fromUtf8(view.characters_without_null_termination(), view.length());
+//}
 
 void platform_init()
 {
@@ -45,11 +45,11 @@ void platform_init()
             return DeprecatedString::formatted("{}/Base", source_dir);
         }
         auto* home = getenv("XDG_CONFIG_HOME") ?: getenv("HOME");
-        VERIFY(home);
+                VERIFY(home);
         auto home_lagom = DeprecatedString::formatted("{}/.lagom", home);
         if (FileSystem::is_directory(home_lagom))
             return home_lagom;
-        auto app_dir = ak_deprecated_string_from_qstring(QCoreApplication::applicationDirPath());
+        auto app_dir = ak_deprecated_string_from_cstring(g_get_current_dir());
 #    ifdef AK_OS_MACOS
         return LexicalPath(app_dir).parent().append("Resources"sv).string();
 #    else

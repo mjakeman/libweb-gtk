@@ -8,12 +8,12 @@
 
 #include <AK/DeprecatedString.h>
 #include <AK/String.h>
-#include <QString>
-
-AK::DeprecatedString ak_deprecated_string_from_qstring(QString const&);
-ErrorOr<String> ak_string_from_qstring(QString const&);
-QString qstring_from_ak_deprecated_string(AK::DeprecatedString const&);
-QString qstring_from_ak_string(String const&);
+//#include <QString>
+//
+AK::DeprecatedString ak_deprecated_string_from_cstring(const char*);
+ErrorOr<String> ak_string_from_cstring(const char*);
+//QString qstring_from_ak_deprecated_string(AK::DeprecatedString const&);
+//QString qstring_from_ak_string(String const&);
 void platform_init();
 
 extern DeprecatedString s_serenity_resource_root;
