@@ -11,16 +11,14 @@
 #include <AK/NonnullRefPtr.h>
 #include <LibAudio/Forward.h>
 #include <LibWeb/Platform/AudioCodecPlugin.h>
-#include <QObject>
+// #include <QObject>
 
 namespace Ladybird {
 
 class AudioThread;
 
 class AudioCodecPluginLadybird final
-    : public QObject
-    , public Web::Platform::AudioCodecPlugin {
-    Q_OBJECT
+    : public Web::Platform::AudioCodecPlugin {
 
 public:
     static ErrorOr<NonnullOwnPtr<AudioCodecPluginLadybird>> create(NonnullRefPtr<Audio::Loader>);

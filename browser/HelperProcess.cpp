@@ -24,6 +24,7 @@ ErrorOr<void> spawn_helper_process(StringView process_name, ReadonlySpan<StringV
 }
 
 ErrorOr<Vector<String>> get_paths_for_helper_process(StringView process_name)
+{
     auto application_path = TRY(ak_string_from_cstring(g_get_current_dir()));
     Vector<String> paths;
 

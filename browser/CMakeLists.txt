@@ -112,7 +112,7 @@ target_include_directories(ladybird PRIVATE ${SERENITY_SOURCE_DIR}/Userland/Appl
 target_include_directories(ladybird PRIVATE ${SERENITY_SOURCE_DIR}/Userland/Services/)
 
 add_executable(headless-browser
-        ${SERENITY_SOURCE_DIR}/Userland/Utilities/headless-browser.cpp
+        #${SERENITY_SOURCE_DIR}/Userland/Utilities/headless-browser.cpp
         ${SERENITY_SOURCE_DIR}/Userland/Services/WebContent/WebDriverConnection.cpp
         HelperProcess.cpp
         Utilities.cpp)
