@@ -4,13 +4,17 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include "BrowserWindow.h"
+// #include "BrowserWindow.h"
 #include "EventLoopImplementationGLib.h"
 #include "HelperProcess.h"
-#include "Settings.h"
+// #include "Settings.h"
 #include "Utilities.h"
-#include "WebContentView.h"
+// #include "WebContentView.h"
+#include <AK/DeprecatedString.h>
+#include <AK/Function.h>
+#include <AK/HashMap.h>
 #include <AK/OwnPtr.h>
+#include <AK/URL.h>
 #include <Browser/CookieJar.h>
 #include <Browser/Database.h>
 #include <LibCore/ArgsParser.h>
@@ -22,7 +26,7 @@
 #include <LibSQL/SQLClient.h>
 #include <gtk/gtk.h>
 
-AK::OwnPtr<Browser::Settings> s_settings;
+//AK::OwnPtr<Browser::Settings> s_settings;
 
 static ErrorOr<void> handle_attached_debugger()
 {
@@ -52,8 +56,7 @@ static ErrorOr<void> handle_attached_debugger()
 
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
-    GtkApplication *app = gtk_application_new("com.mattjakeman.LibWebGTK", G_APPLICATION_DEFAULT_FLAGS);
-    // QApplication app(arguments.argc, arguments.argv);
+    gtk_init();
 
     Core::EventLoopManager::install(*new Ladybird::EventLoopManagerGLib);
     Core::EventLoop event_loop; // Create main loop
@@ -100,12 +103,12 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 
     auto cookie_jar = database ? TRY(Browser::CookieJar::create(*database)) : Browser::CookieJar::create();
 
-    s_settings = adopt_own_if_nonnull(new Browser::Settings());
+    // s_settings = adopt_own_if_nonnull(new Browser::Settings());
 //    BrowserWindow window(cookie_jar, webdriver_content_ipc_path, enable_callgrind_profiling ? WebView::EnableCallgrindProfiling::Yes : WebView::EnableCallgrindProfiling::No, use_javascript_bytecode ? WebView::UseJavaScriptBytecode::Yes : WebView::UseJavaScriptBytecode::No);
 //    window.setWindowTitle("browser");
 //    window.resize(800, 600);
 //    window.show();
-    GtkWidget *window = gtk_application_window_new(app);
+    GtkWidget *window = gtk_window_new();
     gtk_window_set_title(GTK_WINDOW (window), "LibWeb GTK");
     gtk_window_set_default_size(GTK_WINDOW (window), 800, 600);
     gtk_window_present(GTK_WINDOW (window));

@@ -8,9 +8,9 @@
 #include "../EventLoopImplementationGLib.h"
 #include "../FontPluginQt.h"
 #include "../ImageCodecPluginLadybird.h"
-#include "../RequestManagerQt.h"
+// #include "../RequestManagerSoup.h"
 #include "../Utilities.h"
-#include "../WebSocketClientManagerLadybird.h"
+// #include "../WebSocketClientManagerLadybird.h"
 #include <AK/LexicalPath.h>
 #include <AK/Platform.h>
 #include <LibAudio/Loader.h>
@@ -29,8 +29,6 @@
 #include <LibWeb/PermissionsPolicy/AutoplayAllowlist.h>
 #include <LibWeb/Platform/EventLoopPluginSerenity.h>
 #include <LibWeb/WebSockets/WebSocket.h>
-#include <QGuiApplication>
-#include <QTimer>
 #include <WebContent/ConnectionFromClient.h>
 #include <WebContent/PageHost.h>
 #include <WebContent/WebDriverConnection.h>
@@ -46,7 +44,7 @@ extern DeprecatedString s_serenity_resource_root;
 
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
-    QGuiApplication app(arguments.argc, arguments.argv);
+    // QGuiApplication app(arguments.argc, arguments.argv);
 
 #if defined(AK_OS_MACOS)
     prohibit_interaction();
@@ -64,8 +62,9 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
         return Ladybird::AudioCodecPluginLadybird::create(move(loader));
     });
 
-    Web::ResourceLoader::initialize(RequestManagerQt::create());
-    Web::WebSockets::WebSocketClientManager::initialize(Ladybird::WebSocketClientManagerLadybird::create());
+    // TODO: WE DEFINITELY NEED THESE !!
+    // Web::ResourceLoader::initialize(RequestManagerSoup::create());
+    // Web::WebSockets::WebSocketClientManager::initialize(Ladybird::WebSocketClientManagerLadybird::create());
 
     Web::FrameLoader::set_default_favicon_path(DeprecatedString::formatted("{}/res/icons/16x16/app-browser.png", s_serenity_resource_root));
 

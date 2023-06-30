@@ -4,25 +4,24 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include "RequestManagerQt.h"
+#include "RequestManagerSoup.h"
 #include <AK/JsonObject.h>
-#include <QNetworkCookie>
 
-RequestManagerQt::RequestManagerQt()
+RequestManagerSoup::RequestManagerSoup()
 {
     m_qnam = new QNetworkAccessManager(this);
 
-    QObject::connect(m_qnam, &QNetworkAccessManager::finished, this, &RequestManagerQt::reply_finished);
+    QObject::connect(m_qnam, &QNetworkAccessManager::finished, this, &RequestManagerSoup::reply_finished);
 }
 
-void RequestManagerQt::reply_finished(QNetworkReply* reply)
+void RequestManagerSoup::reply_finished(QNetworkReply* reply)
 {
     auto request = m_pending.get(reply).value();
     m_pending.remove(reply);
     request->did_finish();
 }
 
-RefPtr<Web::ResourceLoaderConnectorRequest> RequestManagerQt::start_request(DeprecatedString const& method, AK::URL const& url, HashMap<DeprecatedString, DeprecatedString> const& request_headers, ReadonlyBytes request_body, Core::ProxyData const& proxy)
+RefPtr<Web::ResourceLoaderConnectorRequest> RequestManagerSoup::start_request(DeprecatedString const& method, AK::URL const& url, HashMap<DeprecatedString, DeprecatedString> const& request_headers, ReadonlyBytes request_body, Core::ProxyData const& proxy)
 {
     if (!url.scheme().is_one_of_ignoring_ascii_case("http"sv, "https"sv)) {
         return nullptr;
@@ -36,7 +35,7 @@ RefPtr<Web::ResourceLoaderConnectorRequest> RequestManagerQt::start_request(Depr
     return request;
 }
 
-ErrorOr<NonnullRefPtr<RequestManagerQt::Request>> RequestManagerQt::Request::create(QNetworkAccessManager& qnam, DeprecatedString const& method, AK::URL const& url, HashMap<DeprecatedString, DeprecatedString> const& request_headers, ReadonlyBytes request_body, Core::ProxyData const&)
+ErrorOr<NonnullRefPtr<RequestManagerSoup::Request>> RequestManagerSoup::Request::create(QNetworkAccessManager& qnam, DeprecatedString const& method, AK::URL const& url, HashMap<DeprecatedString, DeprecatedString> const& request_headers, ReadonlyBytes request_body, Core::ProxyData const&)
 {
     QNetworkRequest request { QString(url.to_deprecated_string().characters()) };
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
@@ -74,14 +73,14 @@ ErrorOr<NonnullRefPtr<RequestManagerQt::Request>> RequestManagerQt::Request::cre
     return adopt_ref(*new Request(*reply));
 }
 
-RequestManagerQt::Request::Request(QNetworkReply& reply)
+RequestManagerSoup::Request::Request(QNetworkReply& reply)
     : m_reply(reply)
 {
 }
 
-RequestManagerQt::Request::~Request() = default;
+RequestManagerSoup::Request::~Request() = default;
 
-void RequestManagerQt::Request::did_finish()
+void RequestManagerSoup::Request::did_finish()
 {
     auto buffer = m_reply.readAll();
     auto http_status_code = m_reply.attribute(QNetworkRequest::Attribute::HttpStatusCodeAttribute).toInt();

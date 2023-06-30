@@ -7,20 +7,16 @@
 #pragma once
 
 #include <LibWeb/Loader/ResourceLoader.h>
-#include <QtNetwork/QNetworkAccessManager>
-#include <QtNetwork/QNetworkReply>
 
-class RequestManagerQt
-    : public QObject
-    , public Web::ResourceLoaderConnector {
-    Q_OBJECT
+class RequestManagerSoup
+    : public Web::ResourceLoaderConnector {
 public:
-    static NonnullRefPtr<RequestManagerQt> create()
+    static NonnullRefPtr<RequestManagerSoup> create()
     {
-        return adopt_ref(*new RequestManagerQt());
+        return adopt_ref(*new RequestManagerSoup());
     }
 
-    virtual ~RequestManagerQt() override { }
+    virtual ~RequestManagerSoup() override { }
 
     virtual void prefetch_dns(AK::URL const&) override { }
     virtual void preconnect(AK::URL const&) override { }
@@ -31,7 +27,7 @@ private slots:
     void reply_finished(QNetworkReply*);
 
 private:
-    RequestManagerQt();
+    RequestManagerSoup();
 
     class Request
         : public Web::ResourceLoaderConnectorRequest {

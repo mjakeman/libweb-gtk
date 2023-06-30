@@ -10,20 +10,24 @@ set(WEBCONTENT_SOURCES
     ../EventLoopImplementationGLib.cpp
         ../FontPluginGTK.cpp
     ../ImageCodecPluginLadybird.cpp
-    ../RequestManagerQt.cpp
+    #   ../RequestManagerSoup.cpp
     ../Utilities.cpp
-    ../WebSocketClientManagerLadybird.cpp
-    ../WebSocketLadybird.cpp
-    ../WebSocketImplQt.cpp
+    #../WebSocketClientManagerLadybird.cpp
+    #../WebSocketLadybird.cpp
+    #../WebSocketImplQt.cpp
     main.cpp
 )
 
 if (APPLE)
     list(APPEND WEBCONTENT_SOURCES MacOSSetup.mm)
+    find_library(COCOA_LIBRARY Cocoa)
+    if(NOT COCOA_LIBRARY)
+        message(FATAL_ERROR "Cocoa framework not found")
+    endif()
 endif()
 
 add_executable(WebContent ${WEBCONTENT_SOURCES})
 
 target_include_directories(WebContent PRIVATE ${SERENITY_SOURCE_DIR}/Userland/Services/)
 target_include_directories(WebContent PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/..)
-target_link_libraries(WebContent PRIVATE ${GTK4_LIBRARIES} LibAudio LibCore LibFileSystem LibGfx LibIPC LibJS LibMain LibWeb LibWebSocket)
+target_link_libraries(WebContent PRIVATE ${GTK4_LIBRARIES} ${COCOA_LIBRARY} LibAudio LibCore LibFileSystem LibGfx LibIPC LibJS LibMain LibWeb LibWebSocket)

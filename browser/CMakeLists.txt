@@ -89,8 +89,8 @@ set(SOURCES
     ${BROWSER_SOURCE_DIR}/History.cpp
 #    BrowserWindow.cpp
 #    ConsoleWidget.cpp
-#    EventLoopImplementationGLib.cpp
-#    HelperProcess.cpp
+    EventLoopImplementationGLib.cpp
+    HelperProcess.cpp
 #    InspectorWidget.cpp
 #    LocationEdit.cpp
 #    ModelTranslator.cpp
@@ -112,10 +112,12 @@ target_include_directories(ladybird PRIVATE ${SERENITY_SOURCE_DIR}/Userland/Appl
 target_include_directories(ladybird PRIVATE ${SERENITY_SOURCE_DIR}/Userland/Services/)
 
 add_executable(headless-browser
+        HeadlessBrowser.cpp
         #${SERENITY_SOURCE_DIR}/Userland/Utilities/headless-browser.cpp
-        ${SERENITY_SOURCE_DIR}/Userland/Services/WebContent/WebDriverConnection.cpp
-        HelperProcess.cpp
-        Utilities.cpp)
+        #${SERENITY_SOURCE_DIR}/Userland/Services/WebContent/WebDriverConnection.cpp
+        #HelperProcess.cpp
+        #Utilities.cpp)
+)
 
 target_include_directories(headless-browser PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(ladybird PRIVATE ${GTK4_LIBRARIES} LibWeb LibWebView LibWebSocket LibCrypto LibFileSystem LibGemini LibHTTP LibJS LibGfx LibMain LibTLS LibIPC LibJS LibDiff)

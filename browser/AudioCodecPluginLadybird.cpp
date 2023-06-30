@@ -63,14 +63,14 @@ public:
 //Q_SIGNALS:
 //    void playback_position_updated(Duration);
 
-//private:
-//    AudioThread(NonnullRefPtr<Audio::Loader> loader, AudioTaskQueue task_queue)
-//        : m_loader(move(loader))
-//        , m_task_queue(move(task_queue))
-//    {
-//        auto duration = static_cast<double>(m_loader->total_samples()) / static_cast<double>(m_loader->sample_rate());
-//        m_duration = Duration::from_milliseconds(static_cast<i64>(duration * 1000.0));
-//    }
+private:
+    AudioThread(NonnullRefPtr<Audio::Loader> loader, AudioTaskQueue task_queue)
+        : m_loader(move(loader))
+        , m_task_queue(move(task_queue))
+    {
+        auto duration = static_cast<double>(m_loader->total_samples()) / static_cast<double>(m_loader->sample_rate());
+        m_duration = Duration::from_milliseconds(static_cast<i64>(duration * 1000.0));
+    }
 //
 //    enum class Paused {
 //        Yes,

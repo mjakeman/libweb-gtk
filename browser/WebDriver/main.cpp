@@ -15,7 +15,6 @@
 #include <LibCore/System.h>
 #include <LibCore/TCPServer.h>
 #include <LibMain/Main.h>
-#include <QCoreApplication>
 #include <WebDriver/Client.h>
 
 extern DeprecatedString s_serenity_resource_root;
@@ -59,7 +58,7 @@ static ErrorOr<pid_t> launch_headless_browser(DeprecatedString const& socket_pat
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
     // Note: only creating this to get access to its static methods in HelperProcess
-    QCoreApplication application(arguments.argc, arguments.argv);
+    // QCoreApplication application(arguments.argc, arguments.argv);
 
     auto listen_address = "0.0.0.0"sv;
     int port = 8000;

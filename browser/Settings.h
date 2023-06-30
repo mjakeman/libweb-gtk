@@ -7,7 +7,7 @@
 #pragma once
 
 #include <AK/DeprecatedString.h>
-#include <QSettings>
+#include <gio/gio.h>
 
 namespace Browser {
 
