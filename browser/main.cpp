@@ -24,7 +24,7 @@
 #include <LibGfx/Font/FontDatabase.h>
 #include <LibMain/Main.h>
 #include <LibSQL/SQLClient.h>
-#include <gtk/gtk.h>
+#include <gtkmm.h>
 
 //AK::OwnPtr<Browser::Settings> s_settings;
 
@@ -56,7 +56,8 @@ static ErrorOr<void> handle_attached_debugger()
 
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
-    gtk_init();
+    // Init Gtkmm
+    Gtk::Application::create("com.mattjakeman.LibWebGTK");
 
     Core::EventLoopManager::install(*new Ladybird::EventLoopManagerGLib);
     Core::EventLoop event_loop; // Create main loop
@@ -108,10 +109,10 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 //    window.setWindowTitle("browser");
 //    window.resize(800, 600);
 //    window.show();
-    GtkWidget *window = gtk_window_new();
-    gtk_window_set_title(GTK_WINDOW (window), "LibWeb GTK");
-    gtk_window_set_default_size(GTK_WINDOW (window), 800, 600);
-    gtk_window_present(GTK_WINDOW (window));
+    Gtk::Window window = Gtk::Window();
+    window.set_title("LibWeb GTK");
+    window.set_default_size(800, 600);
+    window.present();
 
     if (auto url = TRY(get_formatted_url(raw_url)); url.is_valid()) {
         //window.view().load(url);
