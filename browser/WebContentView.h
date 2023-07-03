@@ -103,6 +103,9 @@ private:
     virtual Gfx::IntPoint to_content_position(Gfx::IntPoint widget_position) const override;
     virtual Gfx::IntPoint to_widget_position(Gfx::IntPoint content_position) const override;
 
+    void draw_func(const Cairo::RefPtr<Cairo::Context>& context, int width, int height);
+    void resize_event(int width, int height);
+
     std::shared_ptr<Gtk::Adjustment> m_vertical_adj;
     std::shared_ptr<Gtk::Adjustment> m_horizontal_adj;
     Gtk::DrawingArea m_drawing_area;

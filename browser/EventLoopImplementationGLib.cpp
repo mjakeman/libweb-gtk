@@ -103,6 +103,8 @@ int EventLoopManagerGLib::register_timer(Core::Object& object, int milliseconds,
     source->attach(Glib::MainContext::get_default());
     thread_data.timers.set(timer_id, move(source));
 
+    dbgln("Registered timer (id={}, object={}, ms={}, reload={}, fire_not_vis={})", timer_id, &object, milliseconds, should_reload, (int)should_fire_when_not_visible);
+
     return timer_id;
 }
 
@@ -115,6 +117,9 @@ bool EventLoopManagerGLib::unregister_timer(int timer_id)
     if (timer.has_value()) {
         timer->get()->destroy();
     }
+
+    dbgln("Unregistered timer (timer_id={})", timer_id);
+
     return thread_data.timers.remove(timer_id);
 }
 

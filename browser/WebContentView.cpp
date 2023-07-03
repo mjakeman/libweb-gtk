@@ -32,6 +32,8 @@
 #include <LibWeb/Crypto/Crypto.h>
 #include <LibWeb/Loader/ContentFilter.h>
 #include <LibWebView/WebContentClient.h>
+#include <gdkmm/general.h>
+#include <gdkmm/pixbuf.h>
 
 bool is_using_dark_system_theme(Gtk::Widget&);
 
@@ -59,6 +61,9 @@ WebContentView::WebContentView(StringView webdriver_content_ipc_path, WebView::E
 
     signal_map().connect(sigc::mem_fun(*this, &WebContentView::show_event));
     signal_unmap().connect(sigc::mem_fun(*this, &WebContentView::hide_event));
+
+    m_drawing_area.set_draw_func(sigc::mem_fun(*this, &WebContentView::draw_func));
+    m_drawing_area.signal_resize().connect(sigc::mem_fun(*this, &WebContentView::resize_event));
 
     create_client(enable_callgrind_profiling, use_javascript_bytecode);
 }
@@ -410,14 +415,57 @@ void WebContentView::paintEvent(QPaintEvent*)
     }
 
     painter.fillRect(rect(), palette().base());
-}
+}*/
 
-void WebContentView::resizeEvent(QResizeEvent* event)
+void WebContentView::resize_event(int, int)
 {
-    QAbstractScrollArea::resizeEvent(event);
     update_viewport_rect();
     handle_resize();
-}*/
+}
+
+void WebContentView::draw_func(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height)
+{
+    (void) width;
+    (void) height;
+
+    cr->save();
+
+    cr->scale(m_inverse_pixel_scaling_ratio, m_inverse_pixel_scaling_ratio);
+//    cr->set_source_rgb(255, 0, 0);
+//    cr->rectangle(0, 0, 50, 50);
+//    cr->fill();
+
+    Gfx::Bitmap const* bitmap;
+//    Gfx::IntSize bitmap_size;
+
+    if (m_client_state.has_usable_bitmap) {
+        bitmap = m_client_state.front_bitmap.bitmap.ptr();
+//        bitmap_size = m_client_state.front_bitmap.last_painted_size;
+
+    } else {
+        bitmap = m_backup_bitmap.ptr();
+//        bitmap_size = m_backup_bitmap_size;
+    }
+
+    if (bitmap) {
+        dbgln("Bitmap");
+        auto pixbuf = Gdk::Pixbuf::create_from_data(bitmap->scanline_u8(0), Gdk::Colorspace::RGB, true, 8, bitmap->width(), bitmap->height(), 4 * bitmap->width());
+        Gdk::Cairo::set_source_pixbuf(cr, pixbuf, 0, 0);
+        cr->paint();
+
+//        if (bitmap_size.width() < width()) {
+//            painter.fillRect(bitmap_size.width(), 0, width() - bitmap_size.width(), bitmap->height(), palette().base());
+//        }
+//        if (bitmap_size.height() < height()) {
+//            painter.fillRect(0, bitmap_size.height(), width(), height() - bitmap_size.height(), palette().base());
+//        }
+
+        return;
+    }
+    dbgln("No Bitmap");
+
+    cr->restore();
+}
 
 void WebContentView::set_viewport_rect(Gfx::IntRect rect)
 {
@@ -547,6 +595,7 @@ void WebContentView::create_client(WebView::EnableCallgrindProfiling enable_call
 
 void WebContentView::notify_server_did_paint(Badge<WebContentClient>, i32 bitmap_id, Gfx::IntSize size)
 {
+    dbgln("Paint");
     if (m_client_state.back_bitmap.id == bitmap_id) {
         m_client_state.has_usable_bitmap = true;
         m_client_state.back_bitmap.pending_paints--;
@@ -554,7 +603,7 @@ void WebContentView::notify_server_did_paint(Badge<WebContentClient>, i32 bitmap
         swap(m_client_state.back_bitmap, m_client_state.front_bitmap);
         // We don't need the backup bitmap anymore, so drop it.
         m_backup_bitmap = nullptr;
-        queue_resize(); // TODO: Do this here?
+        queue_draw(); // TODO: Do this here?
 
         if (m_client_state.got_repaint_requests_while_painting) {
             m_client_state.got_repaint_requests_while_painting = false;

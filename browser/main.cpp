@@ -125,6 +125,8 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     window.set_child(view);
     window.present();
 
+    view.load(AK::DeprecatedString("https://google.com/"));
+
     if (auto url = TRY(get_formatted_url(raw_url)); url.is_valid()) {
         //window.view().load(url);
     } else {
