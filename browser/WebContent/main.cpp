@@ -32,9 +32,12 @@
 #include <WebContent/ConnectionFromClient.h>
 #include <WebContent/PageHost.h>
 #include <WebContent/WebDriverConnection.h>
+#include <gtkmm/application.h>
 
 #if defined(AK_OS_MACOS)
 #    include "MacOSSetup.h"
+#include "../RequestManagerSoup.h"
+
 #endif
 
 static ErrorOr<void> load_content_filters();
@@ -45,6 +48,7 @@ extern DeprecatedString s_serenity_resource_root;
 ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
     // QGuiApplication app(arguments.argc, arguments.argv);
+    Gtk::Application::create("com.mattjakeman.LibWebGTK.WebContent");
 
 #if defined(AK_OS_MACOS)
     prohibit_interaction();
@@ -63,8 +67,8 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     });
 
     // TODO: WE DEFINITELY NEED THESE !!
-    // Web::ResourceLoader::initialize(RequestManagerSoup::create());
-    // Web::WebSockets::WebSocketClientManager::initialize(Ladybird::WebSocketClientManagerLadybird::create());
+    Web::ResourceLoader::initialize(RequestManagerSoup::create());
+    //Web::WebSockets::WebSocketClientManager::initialize(Ladybird::WebSocketClientManagerLadybird::create());
 
     Web::FrameLoader::set_default_favicon_path(DeprecatedString::formatted("{}/res/icons/16x16/app-browser.png", s_serenity_resource_root));
 

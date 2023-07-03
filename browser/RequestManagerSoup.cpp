@@ -9,21 +9,26 @@
 
 RequestManagerSoup::RequestManagerSoup()
 {
-    m_qnam = new QNetworkAccessManager(this);
-
-    QObject::connect(m_qnam, &QNetworkAccessManager::finished, this, &RequestManagerSoup::reply_finished);
+//    m_qnam = new QNetworkAccessManager(this);
+//
+//    QObject::connect(m_qnam, &QNetworkAccessManager::finished, this, &RequestManagerSoup::reply_finished);
 }
 
-void RequestManagerSoup::reply_finished(QNetworkReply* reply)
-{
-    auto request = m_pending.get(reply).value();
-    m_pending.remove(reply);
-    request->did_finish();
-}
+//void RequestManagerSoup::reply_finished(QNetworkReply* reply)
+//{
+//    auto request = m_pending.get(reply).value();
+//    m_pending.remove(reply);
+//    request->did_finish();
+//}
 
 RefPtr<Web::ResourceLoaderConnectorRequest> RequestManagerSoup::start_request(DeprecatedString const& method, AK::URL const& url, HashMap<DeprecatedString, DeprecatedString> const& request_headers, ReadonlyBytes request_body, Core::ProxyData const& proxy)
 {
-    if (!url.scheme().is_one_of_ignoring_ascii_case("http"sv, "https"sv)) {
+    (void)method;
+    (void)url;
+    (void)request_headers;
+    (void)request_body;
+    (void)proxy;
+    /*if (!url.scheme().is_one_of_ignoring_ascii_case("http"sv, "https"sv)) {
         return nullptr;
     }
     auto request_or_error = Request::create(*m_qnam, method, url, request_headers, request_body, proxy);
@@ -32,12 +37,17 @@ RefPtr<Web::ResourceLoaderConnectorRequest> RequestManagerSoup::start_request(De
     }
     auto request = request_or_error.release_value();
     m_pending.set(&request->reply(), *request);
-    return request;
+    return request;*/
+    return nullptr;
 }
 
-ErrorOr<NonnullRefPtr<RequestManagerSoup::Request>> RequestManagerSoup::Request::create(QNetworkAccessManager& qnam, DeprecatedString const& method, AK::URL const& url, HashMap<DeprecatedString, DeprecatedString> const& request_headers, ReadonlyBytes request_body, Core::ProxyData const&)
+ErrorOr<NonnullRefPtr<RequestManagerSoup::Request>> RequestManagerSoup::Request::create(DeprecatedString const& method, AK::URL const& url, HashMap<DeprecatedString, DeprecatedString> const& request_headers, ReadonlyBytes request_body, Core::ProxyData const&)
 {
-    QNetworkRequest request { QString(url.to_deprecated_string().characters()) };
+    (void)method;
+    (void)url;
+    (void)request_headers;
+    (void)request_body;
+    /*QNetworkRequest request { QString(url.to_deprecated_string().characters()) };
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
     request.setAttribute(QNetworkRequest::CookieLoadControlAttribute, QNetworkRequest::Manual);
     request.setAttribute(QNetworkRequest::CookieSaveControlAttribute, QNetworkRequest::Manual);
@@ -68,13 +78,13 @@ ErrorOr<NonnullRefPtr<RequestManagerSoup::Request>> RequestManagerSoup::Request:
         reply = qnam.deleteResource(request);
     } else {
         reply = qnam.sendCustomRequest(request, QByteArray(method.characters()), QByteArray((char const*)request_body.data(), request_body.size()));
-    }
+    }*/
 
-    return adopt_ref(*new Request(*reply));
+    return adopt_ref(*new Request(1));
 }
 
-RequestManagerSoup::Request::Request(QNetworkReply& reply)
-    : m_reply(reply)
+RequestManagerSoup::Request::Request(int)
+//    : m_reply(reply)
 {
 }
 
@@ -82,7 +92,7 @@ RequestManagerSoup::Request::~Request() = default;
 
 void RequestManagerSoup::Request::did_finish()
 {
-    auto buffer = m_reply.readAll();
+    /*auto buffer = m_reply.readAll();
     auto http_status_code = m_reply.attribute(QNetworkRequest::Attribute::HttpStatusCodeAttribute).toInt();
     HashMap<DeprecatedString, DeprecatedString, CaseInsensitiveStringTraits> response_headers;
     Vector<DeprecatedString> set_cookie_headers;
@@ -104,5 +114,5 @@ void RequestManagerSoup::Request::did_finish()
         response_headers.set("set-cookie"sv, JsonArray { set_cookie_headers }.to_deprecated_string());
     }
     bool success = http_status_code != 0;
-    on_buffered_request_finish(success, buffer.length(), response_headers, http_status_code, ReadonlyBytes { buffer.data(), (size_t)buffer.size() });
+    on_buffered_request_finish(success, buffer.length(), response_headers, http_status_code, ReadonlyBytes { buffer.data(), (size_t)buffer.size() });*/
 }

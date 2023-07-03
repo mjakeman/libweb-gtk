@@ -150,6 +150,11 @@ add_custom_target(debug${LADYBIRD_CUSTOM_TARGET_SUFFIX}
     USES_TERMINAL
 )
 
+add_custom_target(debug-lldb${LADYBIRD_CUSTOM_TARGET_SUFFIX}
+    COMMAND "${CMAKE_COMMAND}" -E env "SERENITY_SOURCE_DIR=${SERENITY_SOURCE_DIR}" lldb "$<TARGET_FILE:ladybird>"
+    USES_TERMINAL
+)
+
 #qt_finalize_executable(ladybird)
 
 add_subdirectory(SQLServer)

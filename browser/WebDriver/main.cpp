@@ -16,6 +16,7 @@
 #include <LibCore/TCPServer.h>
 #include <LibMain/Main.h>
 #include <WebDriver/Client.h>
+#include <gtkmm/application.h>
 
 extern DeprecatedString s_serenity_resource_root;
 
@@ -59,6 +60,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 {
     // Note: only creating this to get access to its static methods in HelperProcess
     // QCoreApplication application(arguments.argc, arguments.argv);
+    Gtk::Application::create("com.mattjakeman.LibWebGTK.WebDriver");
 
     auto listen_address = "0.0.0.0"sv;
     int port = 8000;

@@ -7,9 +7,11 @@
 #pragma once
 
 #include <LibWeb/Loader/ResourceLoader.h>
+#include <glibmm/object.h>
 
 class RequestManagerSoup
-    : public Web::ResourceLoaderConnector {
+    : Glib::Object
+    , public Web::ResourceLoaderConnector {
 public:
     static NonnullRefPtr<RequestManagerSoup> create()
     {
@@ -23,8 +25,7 @@ public:
 
     virtual RefPtr<Web::ResourceLoaderConnectorRequest> start_request(DeprecatedString const& method, AK::URL const&, HashMap<DeprecatedString, DeprecatedString> const& request_headers, ReadonlyBytes request_body, Core::ProxyData const&) override;
 
-private slots:
-    void reply_finished(QNetworkReply*);
+    sigc::signal<void(int)> signal_reply_finished;
 
 private:
     RequestManagerSoup();
@@ -32,7 +33,7 @@ private:
     class Request
         : public Web::ResourceLoaderConnectorRequest {
     public:
-        static ErrorOr<NonnullRefPtr<Request>> create(QNetworkAccessManager& qnam, DeprecatedString const& method, AK::URL const& url, HashMap<DeprecatedString, DeprecatedString> const& request_headers, ReadonlyBytes request_body, Core::ProxyData const&);
+        static ErrorOr<NonnullRefPtr<Request>> create(DeprecatedString const& method, AK::URL const& url, HashMap<DeprecatedString, DeprecatedString> const& request_headers, ReadonlyBytes request_body, Core::ProxyData const&);
 
         virtual ~Request() override;
 
@@ -42,14 +43,14 @@ private:
 
         void did_finish();
 
-        QNetworkReply& reply() { return m_reply; }
+//        QNetworkReply& reply() { return m_reply; }
 
     private:
-        Request(QNetworkReply&);
-
-        QNetworkReply& m_reply;
+        Request(int);
+//
+//        QNetworkReply& m_reply;
     };
 
-    HashMap<QNetworkReply*, NonnullRefPtr<Request>> m_pending;
-    QNetworkAccessManager* m_qnam { nullptr };
+//    HashMap<QNetworkReply*, NonnullRefPtr<Request>> m_pending;
+//    QNetworkAccessManager* m_qnam { nullptr };
 };
