@@ -8,7 +8,6 @@
 #include <AK/LexicalPath.h>
 #include <AK/Platform.h>
 #include <LibFileSystem/FileSystem.h>
-#include <glib-object.h>
 
 DeprecatedString s_serenity_resource_root;
 
@@ -22,16 +21,16 @@ ErrorOr<String> ak_string_from_cstring(const char *cstring)
     return String::from_utf8(StringView(cstring, strlen(cstring)));
 }
 
-//QString qstring_from_ak_deprecated_string(AK::DeprecatedString const& ak_deprecated_string)
-//{
-//    return QString::fromUtf8(ak_deprecated_string.characters(), ak_deprecated_string.length());
-//}
+Glib::ustring ustring_from_ak_deprecated_string(AK::DeprecatedString const& ak_deprecated_string)
+{
+    return {ak_deprecated_string.characters(), ak_deprecated_string.length()};
+}
 
-//QString qstring_from_ak_string(String const& ak_string)
-//{
-//    auto view = ak_string.bytes_as_string_view();
-//    return QString::fromUtf8(view.characters_without_null_termination(), view.length());
-//}
+Glib::ustring ustring_from_ak_string(String const& ak_string)
+{
+    auto view = ak_string.bytes_as_string_view();
+    return {view.characters_without_null_termination(), view.length()};
+}
 
 void platform_init()
 {

@@ -20,11 +20,10 @@
 #include <LibWeb/Forward.h>
 #include <LibWeb/HTML/ActivateTab.h>
 #include <LibWebView/ViewImplementation.h>
-#include <QAbstractScrollArea>
-#include <QPointer>
-
-class QTextEdit;
-class QLineEdit;
+#include <gtkmm/widget.h>
+#include <gtkmm/scrolledwindow.h>
+#include <gtkmm/drawingarea.h>
+#include <gtkmm/adjustment.h>
 
 namespace WebView {
 class WebContentClient;
@@ -35,16 +34,15 @@ using WebView::WebContentClient;
 class Tab;
 
 class WebContentView final
-    : public QAbstractScrollArea
+    : public Gtk::ScrolledWindow
     , public WebView::ViewImplementation {
-    Q_OBJECT
 public:
     explicit WebContentView(StringView webdriver_content_ipc_path, WebView::EnableCallgrindProfiling, WebView::UseJavaScriptBytecode);
     virtual ~WebContentView() override;
 
     Function<String(const AK::URL&, Web::HTML::ActivateTab)> on_tab_open_request;
 
-    virtual void paintEvent(QPaintEvent*) override;
+    /*virtual void paintEvent(QPaintEvent*) override;
     virtual void resizeEvent(QResizeEvent*) override;
     virtual void mouseMoveEvent(QMouseEvent*) override;
     virtual void mousePressEvent(QMouseEvent*) override;
@@ -58,7 +56,10 @@ public:
     virtual void hideEvent(QHideEvent*) override;
     virtual void focusInEvent(QFocusEvent*) override;
     virtual void focusOutEvent(QFocusEvent*) override;
-    virtual bool event(QEvent*) override;
+    virtual bool event(QEvent*) override;*/
+
+    void show_event();
+    void hide_event();
 
     ErrorOr<String> dump_layout_tree();
 
@@ -91,8 +92,8 @@ public:
     virtual void notify_server_did_request_file(Badge<WebContentClient>, DeprecatedString const& path, i32) override;
     virtual void notify_server_did_finish_handling_input_event(bool event_was_accepted) override;
 
-signals:
-    void urls_dropped(QList<QUrl> const&);
+//signals:
+//    void urls_dropped(QList<QUrl> const&);
 
 private:
     // ^WebView::ViewImplementation
@@ -102,12 +103,16 @@ private:
     virtual Gfx::IntPoint to_content_position(Gfx::IntPoint widget_position) const override;
     virtual Gfx::IntPoint to_widget_position(Gfx::IntPoint content_position) const override;
 
+    std::shared_ptr<Gtk::Adjustment> m_vertical_adj;
+    std::shared_ptr<Gtk::Adjustment> m_horizontal_adj;
+    Gtk::DrawingArea m_drawing_area;
+
     void update_viewport_rect();
 
-    qreal m_inverse_pixel_scaling_ratio { 1.0 };
+    float m_inverse_pixel_scaling_ratio { 1.0 };
     bool m_should_show_line_box_borders { false };
 
-    QPointer<QDialog> m_dialog;
+//    QPointer<QDialog> m_dialog;
 
     Gfx::IntRect m_viewport_rect;
 

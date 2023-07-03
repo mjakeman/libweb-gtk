@@ -24,7 +24,10 @@
 #include <LibGfx/Font/FontDatabase.h>
 #include <LibMain/Main.h>
 #include <LibSQL/SQLClient.h>
-#include <gtkmm.h>
+#include <gtkmm/application.h>
+#include <gtkmm/window.h>
+
+#include "WebContentView.h"
 
 //AK::OwnPtr<Browser::Settings> s_settings;
 
@@ -109,9 +112,17 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 //    window.setWindowTitle("browser");
 //    window.resize(800, 600);
 //    window.show();
+
+    WebContentView view(
+        webdriver_content_ipc_path,
+        enable_callgrind_profiling ? WebView::EnableCallgrindProfiling::Yes : WebView::EnableCallgrindProfiling::No,
+        use_javascript_bytecode ? WebView::UseJavaScriptBytecode::Yes : WebView::UseJavaScriptBytecode::No
+    );
+
     Gtk::Window window = Gtk::Window();
     window.set_title("LibWeb GTK");
     window.set_default_size(800, 600);
+    window.set_child(view);
     window.present();
 
     if (auto url = TRY(get_formatted_url(raw_url)); url.is_valid()) {

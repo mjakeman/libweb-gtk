@@ -101,7 +101,7 @@ set(SOURCES
 #    SettingsDialog.cpp
 #    Tab.cpp
     Utilities.cpp
-#    WebContentView.cpp
+    WebContentView.cpp
 #    ladybird.qrc
     main.cpp
 )

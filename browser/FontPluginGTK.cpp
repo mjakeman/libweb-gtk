@@ -35,13 +35,19 @@ FontPluginGTK::FontPluginGTK(bool is_layout_test_mode)
 
     update_generic_fonts();
 
-    auto default_font_name = generic_font_name(Web::Platform::GenericFont::UiSansSerif);
-    m_default_font = Gfx::FontDatabase::the().get(default_font_name, 12.0, 400, Gfx::FontWidth::Normal, 0);
-    VERIFY(m_default_font);
+//    auto default_font_name = generic_font_name(Web::Platform::GenericFont::UiSansSerif);
+//    m_default_font = Gfx::FontDatabase::the().get(default_font_name, 12.0, 400, Gfx::FontWidth::Normal, 0);
+//    VERIFY(m_default_font);
+//
+//    auto default_fixed_width_font_name = generic_font_name(Web::Platform::GenericFont::UiMonospace);
+//    m_default_fixed_width_font = Gfx::FontDatabase::the().get(default_fixed_width_font_name, 12.0, 400, Gfx::FontWidth::Normal, 0);
+//    VERIFY(m_default_fixed_width_font);
 
-    auto default_fixed_width_font_name = generic_font_name(Web::Platform::GenericFont::UiMonospace);
-    m_default_fixed_width_font = Gfx::FontDatabase::the().get(default_fixed_width_font_name, 12.0, 400, Gfx::FontWidth::Normal, 0);
-    VERIFY(m_default_fixed_width_font);
+    m_default_font = Gfx::FontDatabase::the().get("Arial", 12.0, 400, Gfx::FontWidth::Normal, 0);
+            VERIFY(m_default_font);
+
+    m_default_fixed_width_font = Gfx::FontDatabase::the().get("Andale Mono", 12.0, 400, Gfx::FontWidth::Normal, 0);
+            VERIFY(m_default_fixed_width_font);
 }
 
 FontPluginGTK::~FontPluginGTK() = default;

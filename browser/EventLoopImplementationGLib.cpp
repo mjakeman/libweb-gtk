@@ -22,6 +22,7 @@ struct ThreadData {
         if (!s_thread_data) {
             // FIXME: Don't leak this.
             s_thread_data = new ThreadData;
+            s_thread_data->notifiers = g_hash_table_new(nullptr, nullptr);
         }
         return *s_thread_data;
     }
@@ -76,7 +77,7 @@ void EventLoopImplementationGLib::post_event(Core::Object& receiver, NonnullOwnP
 typedef struct {
     bool should_reload;
     Core::TimerShouldFireWhenNotVisible should_fire_when_not_visible;
-    WeakPtr<Core::Object>& weak_object;
+    WeakPtr<Core::Object> weak_object;
 } TimerData;
 
 static int glib_timer_fired(int timer_id, TimerData *data)
@@ -113,7 +114,7 @@ static void glib_timer_destroy(TimerData *data) {
 
 int EventLoopManagerGLib::register_timer(Core::Object& object, int milliseconds, bool should_reload, Core::TimerShouldFireWhenNotVisible should_fire_when_not_visible)
 {
-    auto data = g_new0(TimerData,1);
+    auto *data = g_new0(TimerData,1);
     data->should_reload = should_reload;
     data->weak_object = object.make_weak_ptr();
     data->should_fire_when_not_visible = should_fire_when_not_visible;

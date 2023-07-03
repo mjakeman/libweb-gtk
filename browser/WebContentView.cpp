@@ -32,67 +32,55 @@
 #include <LibWeb/Crypto/Crypto.h>
 #include <LibWeb/Loader/ContentFilter.h>
 #include <LibWebView/WebContentClient.h>
-#include <QApplication>
-#include <QCursor>
-#include <QGuiApplication>
-#include <QIcon>
-#include <QInputDialog>
-#include <QLineEdit>
-#include <QMessageBox>
-#include <QMimeData>
-#include <QMouseEvent>
-#include <QPaintEvent>
-#include <QPainter>
-#include <QPalette>
-#include <QScrollBar>
-#include <QTextEdit>
-#include <QTimer>
-#include <QToolTip>
 
-bool is_using_dark_system_theme(QWidget&);
+bool is_using_dark_system_theme(Gtk::Widget&);
 
 WebContentView::WebContentView(StringView webdriver_content_ipc_path, WebView::EnableCallgrindProfiling enable_callgrind_profiling, WebView::UseJavaScriptBytecode use_javascript_bytecode)
     : m_webdriver_content_ipc_path(webdriver_content_ipc_path)
 {
-    setMouseTracking(true);
-    setAcceptDrops(true);
+    set_child(m_drawing_area);
 
-    setFocusPolicy(Qt::FocusPolicy::StrongFocus);
+    m_device_pixel_ratio = (float) get_scale_factor();
+    m_inverse_pixel_scaling_ratio = 1.0f / m_device_pixel_ratio;
 
-    m_device_pixel_ratio = devicePixelRatio();
-    m_inverse_pixel_scaling_ratio = 1.0 / m_device_pixel_ratio;
+    m_vertical_adj = Gtk::Adjustment::create(0, 0, 100, 24, 24, 24);
+    m_horizontal_adj = Gtk::Adjustment::create(0, 0, 100, 24, 24, 24);
 
-    verticalScrollBar()->setSingleStep(24);
-    horizontalScrollBar()->setSingleStep(24);
+    set_vadjustment(m_vertical_adj);
+    set_hadjustment(m_horizontal_adj);
 
-    QObject::connect(verticalScrollBar(), &QScrollBar::valueChanged, [this](int) {
+    m_vertical_adj->property_value().signal_changed().connect([&]() {
         update_viewport_rect();
     });
-    QObject::connect(horizontalScrollBar(), &QScrollBar::valueChanged, [this](int) {
+
+    m_horizontal_adj->property_value().signal_changed().connect([&]() {
         update_viewport_rect();
     });
+
+    signal_map().connect(sigc::mem_fun(*this, &WebContentView::show_event));
+    signal_unmap().connect(sigc::mem_fun(*this, &WebContentView::hide_event));
 
     create_client(enable_callgrind_profiling, use_javascript_bytecode);
 }
 
 WebContentView::~WebContentView() = default;
 
-unsigned get_button_from_qt_event(QMouseEvent const& event)
+/*unsigned get_button_from_gdk_event(Gdk::ModifierType const& event)
 {
-    if (event.button() == Qt::MouseButton::LeftButton)
+    if (event == Gdk::ModifierType::BUTTON1_MASK)
         return 1;
-    if (event.button() == Qt::MouseButton::RightButton)
+    if (event == Gdk::ModifierType::BUTTON1_MASK)
         return 2;
-    if (event.button() == Qt::MouseButton::MiddleButton)
+    if (event == Gdk::ModifierType::BUTTON3_MASK)
         return 4;
-    if (event.button() == Qt::MouseButton::BackButton)
+    if (event == Gdk::ModifierType::BUTTON4_MASK)
         return 8;
-    if (event.buttons() == Qt::MouseButton::ForwardButton)
+    if (event == Gdk::ModifierType::BUTTON5_MASK)
         return 16;
     return 0;
 }
 
-unsigned get_buttons_from_qt_event(QMouseEvent const& event)
+unsigned get_buttons_from_gdk_event(Gdk::ModifierType const& event)
 {
     unsigned buttons = 0;
     if (event.buttons() & Qt::MouseButton::LeftButton)
@@ -265,7 +253,7 @@ KeyCode get_keycode_from_qt_keyboard_event(QKeyEvent const& event)
 void WebContentView::mouseMoveEvent(QMouseEvent* event)
 {
     Gfx::IntPoint position(event->position().x() / m_inverse_pixel_scaling_ratio, event->position().y() / m_inverse_pixel_scaling_ratio);
-    auto buttons = get_buttons_from_qt_event(*event);
+    auto buttons = get_buttons_from_gdk_event(*event);
     auto modifiers = get_modifiers_from_qt_mouse_event(*event);
     client().async_mouse_move(to_content_position(position), 0, buttons, modifiers);
 }
@@ -273,7 +261,7 @@ void WebContentView::mouseMoveEvent(QMouseEvent* event)
 void WebContentView::mousePressEvent(QMouseEvent* event)
 {
     Gfx::IntPoint position(event->position().x() / m_inverse_pixel_scaling_ratio, event->position().y() / m_inverse_pixel_scaling_ratio);
-    auto button = get_button_from_qt_event(*event);
+    auto button = get_button_from_gdk_event(*event);
     if (button == 0) {
         // We could not convert Qt buttons to something that Lagom can
         // recognize - don't even bother propagating this to the web engine
@@ -281,14 +269,14 @@ void WebContentView::mousePressEvent(QMouseEvent* event)
         return;
     }
     auto modifiers = get_modifiers_from_qt_mouse_event(*event);
-    auto buttons = get_buttons_from_qt_event(*event);
+    auto buttons = get_buttons_from_gdk_event(*event);
     client().async_mouse_down(to_content_position(position), button, buttons, modifiers);
 }
 
 void WebContentView::mouseReleaseEvent(QMouseEvent* event)
 {
     Gfx::IntPoint position(event->position().x() / m_inverse_pixel_scaling_ratio, event->position().y() / m_inverse_pixel_scaling_ratio);
-    auto button = get_button_from_qt_event(*event);
+    auto button = get_button_from_gdk_event(*event);
 
     if (event->button() & Qt::MouseButton::BackButton) {
         if (on_back_button)
@@ -305,14 +293,14 @@ void WebContentView::mouseReleaseEvent(QMouseEvent* event)
         return;
     }
     auto modifiers = get_modifiers_from_qt_mouse_event(*event);
-    auto buttons = get_buttons_from_qt_event(*event);
+    auto buttons = get_buttons_from_gdk_event(*event);
     client().async_mouse_up(to_content_position(position), button, buttons, modifiers);
 }
 
 void WebContentView::mouseDoubleClickEvent(QMouseEvent* event)
 {
     Gfx::IntPoint position(event->position().x() / m_inverse_pixel_scaling_ratio, event->position().y() / m_inverse_pixel_scaling_ratio);
-    auto button = get_button_from_qt_event(*event);
+    auto button = get_button_from_gdk_event(*event);
     if (button == 0) {
         // We could not convert Qt buttons to something that Lagom can
         // recognize - don't even bother propagating this to the web engine
@@ -320,7 +308,7 @@ void WebContentView::mouseDoubleClickEvent(QMouseEvent* event)
         return;
     }
     auto modifiers = get_modifiers_from_qt_mouse_event(*event);
-    auto buttons = get_buttons_from_qt_event(*event);
+    auto buttons = get_buttons_from_gdk_event(*event);
     client().async_doubleclick(to_content_position(position), button, buttons, modifiers);
 }
 
@@ -429,7 +417,7 @@ void WebContentView::resizeEvent(QResizeEvent* event)
     QAbstractScrollArea::resizeEvent(event);
     update_viewport_rect();
     handle_resize();
-}
+}*/
 
 void WebContentView::set_viewport_rect(Gfx::IntRect rect)
 {
@@ -449,9 +437,9 @@ void WebContentView::set_window_position(Gfx::IntPoint position)
 
 void WebContentView::update_viewport_rect()
 {
-    auto scaled_width = int(viewport()->width() / m_inverse_pixel_scaling_ratio);
-    auto scaled_height = int(viewport()->height() / m_inverse_pixel_scaling_ratio);
-    Gfx::IntRect rect(max(0, horizontalScrollBar()->value()), max(0, verticalScrollBar()->value()), scaled_width, scaled_height);
+    auto scaled_width = int((float)get_width() / m_inverse_pixel_scaling_ratio);
+    auto scaled_height = int((float)get_height() / m_inverse_pixel_scaling_ratio);
+    Gfx::IntRect rect(max(0, m_horizontal_adj->get_value()), max(0, m_vertical_adj->get_value()), scaled_width, scaled_height);
 
     set_viewport_rect(rect);
 
@@ -465,51 +453,50 @@ void WebContentView::update_zoom()
     request_repaint();
 }
 
-void WebContentView::showEvent(QShowEvent* event)
+void WebContentView::show_event()
 {
-    QAbstractScrollArea::showEvent(event);
     client().async_set_system_visibility_state(true);
 }
 
-void WebContentView::hideEvent(QHideEvent* event)
+void WebContentView::hide_event()
 {
-    QAbstractScrollArea::hideEvent(event);
     client().async_set_system_visibility_state(false);
 }
 
-static Core::AnonymousBuffer make_system_theme_from_qt_palette(QWidget& widget, WebContentView::PaletteMode mode)
-{
-    auto qt_palette = widget.palette();
-
-    auto theme_file = mode == WebContentView::PaletteMode::Default ? "Default"sv : "Dark"sv;
-    auto theme = Gfx::load_system_theme(DeprecatedString::formatted("{}/res/themes/{}.ini", s_serenity_resource_root, theme_file)).release_value_but_fixme_should_propagate_errors();
-    auto palette_impl = Gfx::PaletteImpl::create_with_anonymous_buffer(theme);
-    auto palette = Gfx::Palette(move(palette_impl));
-
-    auto translate = [&](Gfx::ColorRole gfx_color_role, QPalette::ColorRole qt_color_role) {
-        auto new_color = Gfx::Color::from_argb(qt_palette.color(qt_color_role).rgba());
-        palette.set_color(gfx_color_role, new_color);
-    };
-
-    translate(Gfx::ColorRole::ThreedHighlight, QPalette::ColorRole::Light);
-    translate(Gfx::ColorRole::ThreedShadow1, QPalette::ColorRole::Mid);
-    translate(Gfx::ColorRole::ThreedShadow2, QPalette::ColorRole::Dark);
-    translate(Gfx::ColorRole::HoverHighlight, QPalette::ColorRole::Light);
-    translate(Gfx::ColorRole::Link, QPalette::ColorRole::Link);
-    translate(Gfx::ColorRole::VisitedLink, QPalette::ColorRole::LinkVisited);
-    translate(Gfx::ColorRole::Button, QPalette::ColorRole::Button);
-    translate(Gfx::ColorRole::ButtonText, QPalette::ColorRole::ButtonText);
-    translate(Gfx::ColorRole::Selection, QPalette::ColorRole::Highlight);
-    translate(Gfx::ColorRole::SelectionText, QPalette::ColorRole::HighlightedText);
-
-    palette.set_flag(Gfx::FlagRole::IsDark, is_using_dark_system_theme(widget));
-
-    return theme;
-}
+//static Core::AnonymousBuffer make_system_theme_from_qt_palette(QWidget& widget, WebContentView::PaletteMode mode)
+//{
+//    auto qt_palette = widget.palette();
+//
+//    auto theme_file = mode == WebContentView::PaletteMode::Default ? "Default"sv : "Dark"sv;
+//    auto theme = Gfx::load_system_theme(DeprecatedString::formatted("{}/res/themes/{}.ini", s_serenity_resource_root, theme_file)).release_value_but_fixme_should_propagate_errors();
+//    auto palette_impl = Gfx::PaletteImpl::create_with_anonymous_buffer(theme);
+//    auto palette = Gfx::Palette(move(palette_impl));
+//
+//    auto translate = [&](Gfx::ColorRole gfx_color_role, QPalette::ColorRole qt_color_role) {
+//        auto new_color = Gfx::Color::from_argb(qt_palette.color(qt_color_role).rgba());
+//        palette.set_color(gfx_color_role, new_color);
+//    };
+//
+//    translate(Gfx::ColorRole::ThreedHighlight, QPalette::ColorRole::Light);
+//    translate(Gfx::ColorRole::ThreedShadow1, QPalette::ColorRole::Mid);
+//    translate(Gfx::ColorRole::ThreedShadow2, QPalette::ColorRole::Dark);
+//    translate(Gfx::ColorRole::HoverHighlight, QPalette::ColorRole::Light);
+//    translate(Gfx::ColorRole::Link, QPalette::ColorRole::Link);
+//    translate(Gfx::ColorRole::VisitedLink, QPalette::ColorRole::LinkVisited);
+//    translate(Gfx::ColorRole::Button, QPalette::ColorRole::Button);
+//    translate(Gfx::ColorRole::ButtonText, QPalette::ColorRole::ButtonText);
+//    translate(Gfx::ColorRole::Selection, QPalette::ColorRole::Highlight);
+//    translate(Gfx::ColorRole::SelectionText, QPalette::ColorRole::HighlightedText);
+//
+//    palette.set_flag(Gfx::FlagRole::IsDark, is_using_dark_system_theme(widget));
+//
+//    return theme;
+//}
 
 void WebContentView::update_palette(PaletteMode mode)
 {
-    client().async_update_system_theme(make_system_theme_from_qt_palette(*this, mode));
+    (void) mode;
+//    client().async_update_system_theme(make_system_theme_from_qt_palette(*this, mode));
 }
 
 void WebContentView::create_client(WebView::EnableCallgrindProfiling enable_callgrind_profiling, WebView::UseJavaScriptBytecode use_javascript_bytecode)
@@ -522,6 +509,7 @@ void WebContentView::create_client(WebView::EnableCallgrindProfiling enable_call
     m_client_state.client = new_client;
     m_client_state.client->on_web_content_process_crash = [this] {
         Core::deferred_invoke([this] {
+            dbgln("Crash report received from client");
             handle_web_content_process_crash();
         });
     };
@@ -533,24 +521,25 @@ void WebContentView::create_client(WebView::EnableCallgrindProfiling enable_call
     update_palette();
     client().async_update_system_fonts(Gfx::FontDatabase::default_font_query(), Gfx::FontDatabase::fixed_width_font_query(), Gfx::FontDatabase::window_title_font_query());
 
-    auto screens = QGuiApplication::screens();
-
-    if (!screens.empty()) {
-        Vector<Gfx::IntRect> screen_rects;
-
-        for (auto const& screen : screens) {
-            auto geometry = screen->geometry();
-
-            screen_rects.append(Gfx::IntRect(geometry.x(), geometry.y(), geometry.width(), geometry.height()));
-        }
-
-        // FIXME: Update the screens again when QGuiApplication::screenAdded/Removed signals are emitted
-
-        // NOTE: The first item in QGuiApplication::screens is always the primary screen.
-        //       This is not specified in the documentation but QGuiApplication::primaryScreen
-        //       always returns the first item in the list if it isn't empty.
-        client().async_update_screen_rects(screen_rects, 0);
-    }
+    // TODO: Doesn't map to GTK/Wayland - can we ignore?
+//    auto screens = QGuiApplication::screens();
+//
+//    if (!screens.empty()) {
+//        Vector<Gfx::IntRect> screen_rects;
+//
+//        for (auto const& screen : screens) {
+//            auto geometry = screen->geometry();
+//
+//            screen_rects.append(Gfx::IntRect(geometry.x(), geometry.y(), geometry.width(), geometry.height()));
+//        }
+//
+//        // FIXME: Update the screens again when QGuiApplication::screenAdded/Removed signals are emitted
+//
+//        // NOTE: The first item in QGuiApplication::screens is always the primary screen.
+//        //       This is not specified in the documentation but QGuiApplication::primaryScreen
+//        //       always returns the first item in the list if it isn't empty.
+//        client().async_update_screen_rects(screen_rects, 0);
+//    }
 
     if (!m_webdriver_content_ipc_path.is_empty())
         client().async_connect_to_webdriver(m_webdriver_content_ipc_path);
@@ -565,7 +554,7 @@ void WebContentView::notify_server_did_paint(Badge<WebContentClient>, i32 bitmap
         swap(m_client_state.back_bitmap, m_client_state.front_bitmap);
         // We don't need the backup bitmap anymore, so drop it.
         m_backup_bitmap = nullptr;
-        viewport()->update();
+        queue_resize(); // TODO: Do this here?
 
         if (m_client_state.got_repaint_requests_while_painting) {
             m_client_state.got_repaint_requests_while_painting = false;
@@ -588,85 +577,85 @@ void WebContentView::notify_server_did_request_cursor_change(Badge<WebContentCli
 {
     switch (cursor) {
     case Gfx::StandardCursor::Hidden:
-        setCursor(Qt::BlankCursor);
+        set_cursor("none");
         break;
     case Gfx::StandardCursor::Arrow:
-        setCursor(Qt::ArrowCursor);
+        set_cursor("default");
         break;
     case Gfx::StandardCursor::Crosshair:
-        setCursor(Qt::CrossCursor);
+        set_cursor("crosshair");
         break;
     case Gfx::StandardCursor::IBeam:
-        setCursor(Qt::IBeamCursor);
+        set_cursor("text");
         break;
     case Gfx::StandardCursor::ResizeHorizontal:
-        setCursor(Qt::SizeHorCursor);
+        set_cursor("col-resize");
         break;
     case Gfx::StandardCursor::ResizeVertical:
-        setCursor(Qt::SizeVerCursor);
+        set_cursor("row-resize");
         break;
     case Gfx::StandardCursor::ResizeDiagonalTLBR:
-        setCursor(Qt::SizeFDiagCursor);
+        set_cursor("nwse-resize");
         break;
     case Gfx::StandardCursor::ResizeDiagonalBLTR:
-        setCursor(Qt::SizeBDiagCursor);
+        set_cursor("nesw-resize");
         break;
     case Gfx::StandardCursor::ResizeColumn:
-        setCursor(Qt::SplitHCursor);
+        set_cursor("col-resize");
         break;
     case Gfx::StandardCursor::ResizeRow:
-        setCursor(Qt::SplitVCursor);
+        set_cursor("row-resize");
         break;
     case Gfx::StandardCursor::Hand:
-        setCursor(Qt::PointingHandCursor);
+        set_cursor("pointer");
         break;
     case Gfx::StandardCursor::Help:
-        setCursor(Qt::WhatsThisCursor);
+        set_cursor("help");
         break;
     case Gfx::StandardCursor::Drag:
-        setCursor(Qt::ClosedHandCursor);
+        set_cursor("grabbing");
         break;
     case Gfx::StandardCursor::DragCopy:
-        setCursor(Qt::DragCopyCursor);
+        set_cursor("copy");
         break;
     case Gfx::StandardCursor::Move:
-        setCursor(Qt::DragMoveCursor);
+        set_cursor("grabbing");
         break;
     case Gfx::StandardCursor::Wait:
-        setCursor(Qt::BusyCursor);
+        set_cursor("wait");
         break;
     case Gfx::StandardCursor::Disallowed:
-        setCursor(Qt::ForbiddenCursor);
+        set_cursor("not-allowed");
         break;
     case Gfx::StandardCursor::Eyedropper:
     case Gfx::StandardCursor::Zoom:
         // FIXME: No corresponding Qt cursors, default to Arrow
     default:
-        setCursor(Qt::ArrowCursor);
+        set_cursor("default");
         break;
     }
 }
 
 void WebContentView::notify_server_did_layout(Badge<WebContentClient>, Gfx::IntSize content_size)
 {
-    verticalScrollBar()->setMinimum(0);
-    verticalScrollBar()->setMaximum(content_size.height() - m_viewport_rect.height());
-    verticalScrollBar()->setPageStep(m_viewport_rect.height());
-    horizontalScrollBar()->setMinimum(0);
-    horizontalScrollBar()->setMaximum(content_size.width() - m_viewport_rect.width());
-    horizontalScrollBar()->setPageStep(m_viewport_rect.width());
+    m_vertical_adj->set_lower(0);
+    m_vertical_adj->set_upper(content_size.height() - m_viewport_rect.height());
+    m_vertical_adj->set_page_increment(m_viewport_rect.height());
+    m_horizontal_adj->set_lower(0);
+    m_horizontal_adj->set_upper(content_size.width() - m_viewport_rect.width());
+    m_horizontal_adj->set_page_increment(m_viewport_rect.width());
 }
 
 void WebContentView::notify_server_did_request_scroll(Badge<WebContentClient>, i32 x_delta, i32 y_delta)
 {
-    horizontalScrollBar()->setValue(max(0, horizontalScrollBar()->value() + x_delta));
-    verticalScrollBar()->setValue(max(0, verticalScrollBar()->value() + y_delta));
+    m_horizontal_adj->set_value(max(0, m_horizontal_adj->get_value() + x_delta));
+    m_vertical_adj->set_value(max(0, m_vertical_adj->get_value() + y_delta));
 }
 
 void WebContentView::notify_server_did_request_scroll_to(Badge<WebContentClient>, Gfx::IntPoint scroll_position)
 {
-    horizontalScrollBar()->setValue(scroll_position.x());
-    verticalScrollBar()->setValue(scroll_position.y());
+    m_horizontal_adj->set_value(scroll_position.x());
+    m_vertical_adj->set_value(scroll_position.y());
 }
 
 void WebContentView::notify_server_did_request_scroll_into_view(Badge<WebContentClient>, Gfx::IntRect const& rect)
@@ -675,76 +664,78 @@ void WebContentView::notify_server_did_request_scroll_into_view(Badge<WebContent
         return;
 
     if (rect.top() < m_viewport_rect.top())
-        verticalScrollBar()->setValue(rect.top());
+        m_vertical_adj->set_value(rect.top());
     else if (rect.top() > m_viewport_rect.top() && rect.bottom() > m_viewport_rect.bottom())
-        verticalScrollBar()->setValue(rect.bottom() - m_viewport_rect.height());
+        m_vertical_adj->set_value(rect.bottom() - m_viewport_rect.height());
 }
 
 void WebContentView::notify_server_did_enter_tooltip_area(Badge<WebContentClient>, Gfx::IntPoint content_position, DeprecatedString const& tooltip)
 {
-    auto widget_position = to_widget_position(content_position);
-    QToolTip::showText(
-        mapToGlobal(QPoint(widget_position.x(), widget_position.y())),
-        qstring_from_ak_deprecated_string(tooltip),
-        this);
+    (void) content_position; // TODO: Use a popover maybe?
+    set_tooltip_text(ustring_from_ak_deprecated_string(tooltip));
 }
 
 void WebContentView::notify_server_did_leave_tooltip_area(Badge<WebContentClient>)
 {
-    QToolTip::hideText();
+    set_tooltip_text(nullptr);
 }
 
 void WebContentView::notify_server_did_request_alert(Badge<WebContentClient>, String const& message)
 {
-    m_dialog = new QMessageBox(QMessageBox::Icon::Warning, "browser", qstring_from_ak_string(message), QMessageBox::StandardButton::Ok, this);
-    m_dialog->exec();
-
-    client().async_alert_closed();
-    m_dialog = nullptr;
+    (void) message;
+//    m_dialog = new QMessageBox(QMessageBox::Icon::Warning, "browser", qstring_from_ak_string(message), QMessageBox::StandardButton::Ok, this);
+//    m_dialog->exec();
+//
+//    client().async_alert_closed();
+//    m_dialog = nullptr;
 }
 
 void WebContentView::notify_server_did_request_confirm(Badge<WebContentClient>, String const& message)
 {
-    m_dialog = new QMessageBox(QMessageBox::Icon::Question, "browser", qstring_from_ak_string(message), QMessageBox::StandardButton::Ok | QMessageBox::StandardButton::Cancel, this);
-    auto result = m_dialog->exec();
-
-    client().async_confirm_closed(result == QMessageBox::StandardButton::Ok || result == QDialog::Accepted);
-    m_dialog = nullptr;
+    (void) message;
+//    m_dialog = new QMessageBox(QMessageBox::Icon::Question, "browser", qstring_from_ak_string(message), QMessageBox::StandardButton::Ok | QMessageBox::StandardButton::Cancel, this);
+//    auto result = m_dialog->exec();
+//
+//    client().async_confirm_closed(result == QMessageBox::StandardButton::Ok || result == QDialog::Accepted);
+//    m_dialog = nullptr;
 }
 
 void WebContentView::notify_server_did_request_prompt(Badge<WebContentClient>, String const& message, String const& default_)
 {
-    m_dialog = new QInputDialog(this);
-    auto& dialog = static_cast<QInputDialog&>(*m_dialog);
-
-    dialog.setWindowTitle("browser");
-    dialog.setLabelText(qstring_from_ak_string(message));
-    dialog.setTextValue(qstring_from_ak_string(default_));
-
-    if (dialog.exec() == QDialog::Accepted)
-        client().async_prompt_closed(ak_string_from_qstring(dialog.textValue()).release_value_but_fixme_should_propagate_errors());
-    else
-        client().async_prompt_closed({});
-
-    m_dialog = nullptr;
+    (void) message;
+    (void) default_;
+//    m_dialog = new QInputDialog(this);
+//    auto& dialog = static_cast<QInputDialog&>(*m_dialog);
+//
+//    dialog.setWindowTitle("browser");
+//    dialog.setLabelText(qstring_from_ak_string(message));
+//    dialog.setTextValue(qstring_from_ak_string(default_));
+//
+//    if (dialog.exec() == QDialog::Accepted)
+//        client().async_prompt_closed(ak_string_from_qstring(dialog.textValue()).release_value_but_fixme_should_propagate_errors());
+//    else
+//        client().async_prompt_closed({});
+//
+//    m_dialog = nullptr;
 }
 
 void WebContentView::notify_server_did_request_set_prompt_text(Badge<WebContentClient>, String const& message)
 {
-    if (m_dialog && is<QInputDialog>(*m_dialog))
-        static_cast<QInputDialog&>(*m_dialog).setTextValue(qstring_from_ak_string(message));
+    (void) message;
+//    if (m_dialog && is<QInputDialog>(*m_dialog))
+//        static_cast<QInputDialog&>(*m_dialog).setTextValue(qstring_from_ak_string(message));
 }
 
 void WebContentView::notify_server_did_request_accept_dialog(Badge<WebContentClient>)
 {
-    if (m_dialog)
-        m_dialog->accept();
+//    if (m_dialog)
+//        m_dialog->accept();
 }
 
 void WebContentView::notify_server_did_request_dismiss_dialog(Badge<WebContentClient>)
 {
-    if (m_dialog)
-        m_dialog->reject();
+//    if (m_dialog)
+//        m_dialog->reject();
 }
 
 void WebContentView::notify_server_did_request_file(Badge<WebContentClient>, DeprecatedString const& path, i32 request_id)
@@ -763,15 +754,15 @@ Gfx::IntRect WebContentView::viewport_rect() const
 
 Gfx::IntPoint WebContentView::to_content_position(Gfx::IntPoint widget_position) const
 {
-    return widget_position.translated(max(0, horizontalScrollBar()->value()), max(0, verticalScrollBar()->value()));
+    return widget_position.translated(max(0, m_horizontal_adj->get_value()), max(0, m_vertical_adj->get_value()));
 }
 
 Gfx::IntPoint WebContentView::to_widget_position(Gfx::IntPoint content_position) const
 {
-    return content_position.translated(-(max(0, horizontalScrollBar()->value())), -(max(0, verticalScrollBar()->value())));
+    return content_position.translated(-(max(0, m_horizontal_adj->get_value())), -(max(0, m_vertical_adj->get_value())));
 }
 
-bool WebContentView::event(QEvent* event)
+/*bool WebContentView::event(QEvent* event)
 {
     // NOTE: We have to implement event() manually as Qt's focus navigation mechanism
     //       eats all the Tab key presses by default.
@@ -792,7 +783,7 @@ bool WebContentView::event(QEvent* event)
     }
 
     return QAbstractScrollArea::event(event);
-}
+}*/
 
 void WebContentView::notify_server_did_finish_handling_input_event(bool event_was_accepted)
 {
