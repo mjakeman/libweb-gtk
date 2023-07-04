@@ -406,34 +406,31 @@ void WebContentView::snapshot_vfunc(const Glib::RefPtr<Gtk::Snapshot>& snapshot)
     const auto allocation = get_allocation();
     const Gdk::Rectangle rect(0, 0, allocation.get_width(), allocation.get_height());
 
-    snapshot->append_color(Gdk::RGBA("white"), rect);
-
-    // TODO: Scaling?
-    // cr->scale(m_inverse_pixel_scaling_ratio, m_inverse_pixel_scaling_ratio);
+    snapshot->scale(m_inverse_pixel_scaling_ratio, m_inverse_pixel_scaling_ratio);
 
     Gfx::Bitmap const* bitmap;
-    // Gfx::IntSize bitmap_size;
+    Gfx::IntSize bitmap_size;
 
     if (m_client_state.has_usable_bitmap) {
         bitmap = m_client_state.front_bitmap.bitmap.ptr();
-        // bitmap_size = m_client_state.front_bitmap.last_painted_size;
+        bitmap_size = m_client_state.front_bitmap.last_painted_size;
 
     } else {
         bitmap = m_backup_bitmap.ptr();
-        // bitmap_size = m_backup_bitmap_size;
+        bitmap_size = m_backup_bitmap_size;
     }
 
     if (bitmap) {
         auto bytes = Glib::Bytes::create(bitmap->scanline_u8(0), bitmap->size_in_bytes());
         auto texture = Gdk::MemoryTexture::create(bitmap->width(), bitmap->height(), Gdk::MemoryTexture::Format::B8G8R8A8, bytes, 4 * bitmap->width());
-        snapshot->append_texture(texture, { 0, 0, get_width(), get_height() });
+        snapshot->append_texture(texture, { 0, 0, bitmap_size.width(), bitmap_size.height() });
 
-//        if (bitmap_size.width() < width()) {
-//            painter.fillRect(bitmap_size.width(), 0, width() - bitmap_size.width(), bitmap->height(), palette().base());
-//        }
-//        if (bitmap_size.height() < height()) {
-//            painter.fillRect(0, bitmap_size.height(), width(), height() - bitmap_size.height(), palette().base());
-//        }
+        if (bitmap_size.width() < rect.get_width()) {
+            snapshot->append_color(Gdk::RGBA("white"), { bitmap_size.width(), 0, get_width() - bitmap_size.width(), bitmap->height() });
+        }
+        if (bitmap_size.height() < rect.get_height()) {
+            snapshot->append_color(Gdk::RGBA("white"), { 0, bitmap_size.height(), get_width(), get_height() - bitmap_size.height() });
+        }
     }
 }
 
