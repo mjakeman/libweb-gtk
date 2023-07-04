@@ -128,13 +128,6 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     Gtk::Button button = Gtk::Button("Go!");
     button.signal_clicked().connect([&]() {
         auto url = navigation.get_buffer().get()->get_text();
-        // TODO: Make this more robust!
-        if (url.find_first_of("/") == 0) {
-            url = Glib::ustring("file://") + url;
-        }
-        else {
-            url = "https://" + url;
-        }
         view.load(ak_deprecated_string_from_ustring(url).value());
     });
 
