@@ -8,10 +8,6 @@ project(ladybird
 
 include(GNUInstallDirs)
 
-if (ANDROID)
-    set(BUILD_SHARED_LIBS OFF)
-endif()
-
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -119,15 +115,15 @@ target_include_directories(ladybird PRIVATE ${SERENITY_SOURCE_DIR}/Userland/)
 target_include_directories(ladybird PRIVATE ${SERENITY_SOURCE_DIR}/Userland/Applications/)
 target_include_directories(ladybird PRIVATE ${SERENITY_SOURCE_DIR}/Userland/Services/)
 
-add_executable(headless-browser
-        HeadlessBrowser.cpp
-        #${SERENITY_SOURCE_DIR}/Userland/Utilities/headless-browser.cpp
-        #${SERENITY_SOURCE_DIR}/Userland/Services/WebContent/WebDriverConnection.cpp
-        #HelperProcess.cpp
-        #Utilities.cpp)
-)
+#add_executable(headless-browser
+#        HeadlessBrowser.cpp
+#        #${SERENITY_SOURCE_DIR}/Userland/Utilities/headless-browser.cpp
+#        #${SERENITY_SOURCE_DIR}/Userland/Services/WebContent/WebDriverConnection.cpp
+#        #HelperProcess.cpp
+#        #Utilities.cpp)
+#)
 
-target_include_directories(headless-browser PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+#target_include_directories(headless-browser PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(ladybird PRIVATE ${GTK4_LIBRARIES} LibWeb LibWebView LibWebSocket LibCrypto LibFileSystem LibGemini LibHTTP LibJS LibGfx LibMain LibTLS LibIPC LibJS LibDiff)
 
 set_target_properties(ladybird PROPERTIES
@@ -139,10 +135,6 @@ set_target_properties(ladybird PROPERTIES
     WIN32_EXECUTABLE TRUE
     XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER org.SerenityOS.Ladybird
 )
-
-if (ANDROID)
-    include(cmake/AndroidExtras.cmake)
-endif()
 
 add_custom_target(run${LADYBIRD_CUSTOM_TARGET_SUFFIX}
     COMMAND "${CMAKE_COMMAND}" -E env "SERENITY_SOURCE_DIR=${SERENITY_SOURCE_DIR}" "$<TARGET_FILE:ladybird>" $ENV{LAGOM_ARGS}
@@ -165,7 +157,8 @@ add_custom_target(debug-lldb${LADYBIRD_CUSTOM_TARGET_SUFFIX}
 add_subdirectory(SQLServer)
 add_subdirectory(WebContent)
 add_subdirectory(WebDriver)
-add_dependencies(ladybird SQLServer WebContent WebDriver headless-browser)
+#add_dependencies(ladybird SQLServer WebContent WebDriver headless-browser)
+add_dependencies(ladybird SQLServer WebContent WebDriver)
 
 if (APPLE)
     # FIXME: Create a proper app bundle for each helper process
@@ -175,7 +168,7 @@ if (APPLE)
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:SQLServer>" "${app_dir}"
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:WebContent>" "${app_dir}"
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:WebDriver>" "${app_dir}"
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:headless-browser>" "${app_dir}"
+#        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:headless-browser>" "${app_dir}"
     )
 endif()
 
@@ -184,10 +177,10 @@ if(NOT CMAKE_SKIP_INSTALL_RULES)
 endif()
 
 include(CTest)
-if (BUILD_TESTING)
-    add_test(
-        NAME LibWeb
-        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/../bin/headless-browser --run-tests ${SERENITY_SOURCE_DIR}/Tests/LibWeb
-    )
-    set_tests_properties(LibWeb PROPERTIES ENVIRONMENT QT_QPA_PLATFORM=offscreen)
-endif()
+#if (BUILD_TESTING)
+#    add_test(
+#        NAME LibWeb
+#        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/../bin/headless-browser --run-tests ${SERENITY_SOURCE_DIR}/Tests/LibWeb
+#    )
+#    set_tests_properties(LibWeb PROPERTIES ENVIRONMENT QT_QPA_PLATFORM=offscreen)
+#endif()

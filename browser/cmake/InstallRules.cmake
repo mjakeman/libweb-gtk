@@ -4,7 +4,8 @@ include(GNUInstallDirs)
 
 set(package ladybird)
 
-set(ladybird_applications ladybird SQLServer WebContent WebDriver headless-browser)
+#set(ladybird_applications ladybird SQLServer WebContent WebDriver headless-browser)
+set(ladybird_applications ladybird SQLServer WebContent WebDriver)
 
 install(TARGETS ${ladybird_applications}
   EXPORT ladybirdTargets

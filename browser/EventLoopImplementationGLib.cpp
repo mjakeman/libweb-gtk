@@ -29,7 +29,8 @@ struct ThreadData {
 
     IDAllocator timer_id_allocator;
     HashMap<int, Glib::RefPtr<Glib::TimeoutSource>> timers;
-    HashMap<Core::Notifier*, int> notifiers;
+    HashMap<Core::Notifier*, Glib::RefPtr<Glib::IOSource>> notifiers;
+    HashMap<int, Glib::RefPtr<Glib::IOChannel>> fd_channels;
 };
 
 EventLoopImplementationGLib::EventLoopImplementationGLib()
@@ -123,45 +124,69 @@ bool EventLoopManagerGLib::unregister_timer(int timer_id)
     return thread_data.timers.remove(timer_id);
 }
 
-static int
-glib_notifier_activated(GIOChannel *source, GIOCondition, gpointer user_data)
-{
-    auto notifier = (Core::Notifier *)user_data;
-    Core::NotifierActivationEvent event(g_io_channel_unix_get_fd (source));
-    notifier->dispatch_event(event);
-    return 1;
-}
-
 void EventLoopManagerGLib::register_notifier(Core::Notifier& notifier)
 {
-    GIOCondition condition;
+    Glib::IOCondition condition;
     switch (notifier.type()) {
     case Core::Notifier::Type::Read:
-        condition = G_IO_IN;
+        condition = Glib::IOCondition::IO_IN;
         break;
     case Core::Notifier::Type::Write:
-        condition = G_IO_OUT;
+        condition = Glib::IOCondition::IO_OUT;
         break;
     default:
         TODO();
     }
 
-    GIOChannel* channel = g_io_channel_unix_new(notifier.fd());
-    guint watch_id = g_io_add_watch_full(channel, G_PRIORITY_DEFAULT, condition, reinterpret_cast<GIOFunc>(glib_notifier_activated), &notifier,
-                                         reinterpret_cast<GDestroyNotify>(g_io_channel_unref));
+    auto fd = notifier.fd();
+    auto thread_data = ThreadData::the();
+
+    Glib::RefPtr<Glib::IOChannel> channel;
+
+    // Get existing channel
+    auto maybe_channel = thread_data.fd_channels.get(fd);
+    if (maybe_channel.has_value()) {
+        channel = maybe_channel.value();
+        channel->reference();
+    } else {
+        channel = Glib::IOChannel::create_from_fd(notifier.fd());
+        thread_data.fd_channels.set(fd, channel);
+
+        // FIXME: Add callback to remove from hashmap
+        // channel->add_destroy_notify_callback(nullptr, ...);
+    }
+
+    auto io_watch = channel->create_watch(condition);
+
+    io_watch->connect([condition, &notifier](Glib::IOCondition cond) -> bool {
+        if (cond == condition) {
+            Core::NotifierActivationEvent event(notifier.fd());
+            notifier.dispatch_event(event);
+        }
+        return G_SOURCE_CONTINUE;
+    });
+    io_watch->attach(Glib::MainContext::get_default());
 
     // Store watch ID for later
     // dbgln("Added notifier (key={}, value={})", &notifier, (int)watch_id);
-    ThreadData::the().notifiers.set(&notifier, watch_id);
+    ThreadData::the().notifiers.set(&notifier, move(io_watch));
 }
 
 void EventLoopManagerGLib::unregister_notifier(Core::Notifier& notifier)
 {
-    auto watch_id = ThreadData::the().notifiers.get(&notifier);
-    if (watch_id.has_value())
-        g_source_remove(watch_id.value());
+    auto thread_data = ThreadData::the();
+
+    auto watch = thread_data.notifiers.get(&notifier);
+    if (watch.has_value()) {
+        watch->get()->destroy();
+    }
+
+    auto channel = thread_data.fd_channels.get(notifier.fd());
+    if (channel.has_value()) {
+        channel->get()->unreference();
+    }
+
     ThreadData::the().notifiers.remove(&notifier);
-    // dbgln("Removed notifier (key={}, value={})", &notifier, watch_id);
 }
 
 void cb_process_events() {
