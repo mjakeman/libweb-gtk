@@ -5,6 +5,8 @@ It's a new, independent, and portable browser engine that is making incredible p
 
 LibWebGTK is akin to WebKitGTK in that it wraps LibWeb for embedding inside GTK based applications.
 
+![A screenshot of the LibWebGTK sample browser on the Ladybird Browser announcement blog post](screenshot.png)
+
 ## Status
 This is not production ready so use at your own risk.
 
