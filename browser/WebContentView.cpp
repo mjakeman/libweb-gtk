@@ -34,8 +34,6 @@
 #include <LibWebView/WebContentClient.h>
 #include <cstring>
 #include <gdkmm/general.h>
-#include <gdkmm/pixbuf.h>
-#include <gdkmm/memorytexture.h>
 
 #define WEB_GDK_BUTTON_FORWARD 9
 #define WEB_GDK_BUTTON_BACKWARD 8
@@ -711,7 +709,7 @@ void WebContentView::notify_server_did_request_scroll_into_view(Badge<WebContent
 
 void WebContentView::notify_server_did_enter_tooltip_area(Badge<WebContentClient>, Gfx::IntPoint content_position, DeprecatedString const& tooltip)
 {
-    (void) content_position; // TODO: Use a popover maybe?
+    (void) content_position;
     set_tooltip_text(ustring_from_ak_deprecated_string(tooltip));
 }
 
@@ -722,22 +720,33 @@ void WebContentView::notify_server_did_leave_tooltip_area(Badge<WebContentClient
 
 void WebContentView::notify_server_did_request_alert(Badge<WebContentClient>, String const& message)
 {
-    (void) message;
-//    m_dialog = new QMessageBox(QMessageBox::Icon::Warning, "browser", qstring_from_ak_string(message), QMessageBox::StandardButton::Ok, this);
-//    m_dialog->exec();
-//
-//    client().async_alert_closed();
-//    m_dialog = nullptr;
+    m_dialog = Gtk::AlertDialog::create();
+    m_dialog->set_message("alert");
+    m_dialog->set_buttons({"OK"});
+    m_dialog->set_detail(ustring_from_ak_string(message));
+    m_dialog->set_modal();
+
+    m_dialog->choose([&](Glib::RefPtr<Gio::AsyncResult>& result) {
+        m_dialog->choose_finish(result);
+        client().async_alert_closed();
+        m_dialog = nullptr;
+    });
 }
 
 void WebContentView::notify_server_did_request_confirm(Badge<WebContentClient>, String const& message)
 {
-    (void) message;
-//    m_dialog = new QMessageBox(QMessageBox::Icon::Question, "browser", qstring_from_ak_string(message), QMessageBox::StandardButton::Ok | QMessageBox::StandardButton::Cancel, this);
-//    auto result = m_dialog->exec();
-//
-//    client().async_confirm_closed(result == QMessageBox::StandardButton::Ok || result == QDialog::Accepted);
-//    m_dialog = nullptr;
+    m_dialog = Gtk::AlertDialog::create();
+    m_dialog->set_message("confirm");
+    m_dialog->set_buttons({"Cancel", "OK"});
+    m_dialog->set_detail(ustring_from_ak_string(message));
+    m_dialog->set_modal();
+
+    m_dialog->choose([&](Glib::RefPtr<Gio::AsyncResult>& result) {
+        int response = m_dialog->choose_finish(result);
+
+        client().async_confirm_closed(response == 1);
+        m_dialog = nullptr;
+    });
 }
 
 void WebContentView::notify_server_did_request_prompt(Badge<WebContentClient>, String const& message, String const& default_)

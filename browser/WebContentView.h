@@ -32,6 +32,7 @@
 #include <gtkmm/eventcontrollermotion.h>
 #include <gtkmm/scrollable.h>
 #include <gtkmm/snapshot.h>
+#include <gtkmm/alertdialog.h>
 
 namespace WebView {
 class WebContentClient;
@@ -140,7 +141,7 @@ private:
     float m_inverse_pixel_scaling_ratio { 1.0 };
     bool m_should_show_line_box_borders { false };
 
-//    QPointer<QDialog> m_dialog;
+    Glib::RefPtr<Gtk::AlertDialog> m_dialog;
 
     Gfx::IntRect m_viewport_rect;
 
