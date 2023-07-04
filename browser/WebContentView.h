@@ -24,6 +24,12 @@
 #include <gtkmm/scrolledwindow.h>
 #include <gtkmm/drawingarea.h>
 #include <gtkmm/adjustment.h>
+#include <gtkmm/eventcontroller.h>
+#include <gtkmm/eventcontrollerkey.h>
+#include <gtkmm/eventcontrollerfocus.h>
+#include <gtkmm/gesturedrag.h>
+#include <gtkmm/gestureclick.h>
+#include <gtkmm/eventcontrollermotion.h>
 
 namespace WebView {
 class WebContentClient;
@@ -60,6 +66,7 @@ public:
 
     void show_event();
     void hide_event();
+    void resize_event(int width, int height);
 
     ErrorOr<String> dump_layout_tree();
 
@@ -103,8 +110,21 @@ private:
     virtual Gfx::IntPoint to_content_position(Gfx::IntPoint widget_position) const override;
     virtual Gfx::IntPoint to_widget_position(Gfx::IntPoint content_position) const override;
 
+    // bool on_key_pressed(guint keyval, guint keycode, Gdk::ModifierType state);
+    // void on_key_released(guint keyval, guint keycode, Gdk::ModifierType state);
+    void on_motion(double x, double y);
+
+    Glib::RefPtr<Gtk::EventControllerKey> m_key_controller;
+    Glib::RefPtr<Gtk::EventControllerFocus> m_focus_controller;
+    Glib::RefPtr<Gtk::EventControllerMotion> m_motion_controller;
+    Glib::RefPtr<Gtk::GestureClick> m_click_gesture;
+
+    bool on_key_pressed(guint keyval, guint keycode, Gdk::ModifierType state);
+    void on_key_released(guint keyval, guint keycode, Gdk::ModifierType state);
+    void on_pressed(int n_press, double x, double y);
+    void on_release(int n_press, double x, double y);
+
     void draw_func(const Cairo::RefPtr<Cairo::Context>& context, int width, int height);
-    void resize_event(int width, int height);
 
     std::shared_ptr<Gtk::Adjustment> m_vertical_adj;
     std::shared_ptr<Gtk::Adjustment> m_horizontal_adj;

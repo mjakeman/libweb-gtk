@@ -103,7 +103,7 @@ int EventLoopManagerGLib::register_timer(Core::Object& object, int milliseconds,
     source->attach(Glib::MainContext::get_default());
     thread_data.timers.set(timer_id, move(source));
 
-    dbgln("Registered timer (id={}, object={}, ms={}, reload={}, fire_not_vis={})", timer_id, &object, milliseconds, should_reload, (int)should_fire_when_not_visible);
+    // dbgln("Registered timer (id={}, object={}, ms={}, reload={}, fire_not_vis={})", timer_id, &object, milliseconds, should_reload, (int)should_fire_when_not_visible);
 
     return timer_id;
 }
@@ -118,7 +118,7 @@ bool EventLoopManagerGLib::unregister_timer(int timer_id)
         timer->get()->destroy();
     }
 
-    dbgln("Unregistered timer (timer_id={})", timer_id);
+    // dbgln("Unregistered timer (timer_id={})", timer_id);
 
     return thread_data.timers.remove(timer_id);
 }
@@ -148,7 +148,7 @@ void EventLoopManagerGLib::register_notifier(Core::Notifier& notifier)
                                          reinterpret_cast<GDestroyNotify>(g_io_channel_unref));
 
     // Store watch ID for later
-    dbgln("Added notifier (key={}, value={})", &notifier, (int)watch_id);
+    // dbgln("Added notifier (key={}, value={})", &notifier, (int)watch_id);
     ThreadData::the().notifiers.set(&notifier, watch_id);
 }
 
@@ -158,7 +158,7 @@ void EventLoopManagerGLib::unregister_notifier(Core::Notifier& notifier)
     if (watch_id.has_value())
         g_source_remove(watch_id.value());
     ThreadData::the().notifiers.remove(&notifier);
-    dbgln("Removed notifier (key={}, value={})", &notifier, watch_id);
+    // dbgln("Removed notifier (key={}, value={})", &notifier, watch_id);
 }
 
 void cb_process_events() {

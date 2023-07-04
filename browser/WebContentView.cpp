@@ -35,6 +35,9 @@
 #include <gdkmm/general.h>
 #include <gdkmm/pixbuf.h>
 
+#define WEB_GDK_BUTTON_FORWARD 9
+#define WEB_GDK_BUTTON_BACKWARD 8
+
 bool is_using_dark_system_theme(Gtk::Widget&);
 
 WebContentView::WebContentView(StringView webdriver_content_ipc_path, WebView::EnableCallgrindProfiling enable_callgrind_profiling, WebView::UseJavaScriptBytecode use_javascript_bytecode)
@@ -65,228 +68,277 @@ WebContentView::WebContentView(StringView webdriver_content_ipc_path, WebView::E
     m_drawing_area.set_draw_func(sigc::mem_fun(*this, &WebContentView::draw_func));
     m_drawing_area.signal_resize().connect(sigc::mem_fun(*this, &WebContentView::resize_event));
 
+    // Event Controllers
+    m_motion_controller = Gtk::EventControllerMotion::create();
+    m_motion_controller->signal_motion().connect(sigc::mem_fun(*this, &WebContentView::on_motion));
+    add_controller(m_motion_controller);
+
+    m_key_controller = Gtk::EventControllerKey::create();
+    m_key_controller->set_propagation_phase(Gtk::PropagationPhase::BUBBLE);
+    m_key_controller->signal_key_pressed().connect(sigc::mem_fun(*this, &WebContentView::on_key_pressed), false);
+    m_key_controller->signal_key_released().connect(sigc::mem_fun(*this, &WebContentView::on_key_released), false);
+    add_controller(m_key_controller);
+
+    m_click_gesture = Gtk::GestureClick::create();
+    m_click_gesture->signal_pressed().connect(sigc::mem_fun(*this, &WebContentView::on_pressed), false);
+    m_click_gesture->signal_pressed().connect(sigc::mem_fun(*this, &WebContentView::on_release), false);
+    add_controller(m_click_gesture);
+
     create_client(enable_callgrind_profiling, use_javascript_bytecode);
 }
 
 WebContentView::~WebContentView() = default;
 
-/*unsigned get_button_from_gdk_event(Gdk::ModifierType const& event)
+unsigned translate_button(unsigned int button)
 {
-    if (event == Gdk::ModifierType::BUTTON1_MASK)
+    if (button == GDK_BUTTON_PRIMARY)
         return 1;
-    if (event == Gdk::ModifierType::BUTTON1_MASK)
+    if (button == GDK_BUTTON_SECONDARY)
         return 2;
-    if (event == Gdk::ModifierType::BUTTON3_MASK)
+    if (button == GDK_BUTTON_MIDDLE)
         return 4;
-    if (event == Gdk::ModifierType::BUTTON4_MASK)
+    if (button == WEB_GDK_BUTTON_FORWARD)
         return 8;
-    if (event == Gdk::ModifierType::BUTTON5_MASK)
+    if (button == WEB_GDK_BUTTON_BACKWARD)
         return 16;
     return 0;
 }
 
-unsigned get_buttons_from_gdk_event(Gdk::ModifierType const& event)
+unsigned translate_buttons(Gdk::ModifierType const state)
 {
+    auto raw_state = (unsigned) state;
+
     unsigned buttons = 0;
-    if (event.buttons() & Qt::MouseButton::LeftButton)
+    if (raw_state & (unsigned) Gdk::ModifierType::BUTTON1_MASK)
         buttons |= 1;
-    if (event.buttons() & Qt::MouseButton::RightButton)
+    if (raw_state & (unsigned) Gdk::ModifierType::BUTTON2_MASK)
         buttons |= 2;
-    if (event.buttons() & Qt::MouseButton::MiddleButton)
+    if (raw_state & (unsigned) Gdk::ModifierType::BUTTON3_MASK)
         buttons |= 4;
-    if (event.buttons() & Qt::MouseButton::BackButton)
-        buttons |= 8;
-    if (event.buttons() & Qt::MouseButton::ForwardButton)
-        buttons |= 16;
+    // TODO: Are these the forward and backwards buttons?
+//    if (raw_state & (unsigned) Gdk::ModifierType::BUTTON4_MASK)
+//        buttons |= 8;
+//    if (raw_state & (unsigned) Gdk::ModifierType::BUTTON5_MASK)
+//        buttons |= 16;
     return buttons;
 }
 
-unsigned get_modifiers_from_qt_mouse_event(QMouseEvent const& event)
+unsigned translate_modifiers(Gdk::ModifierType const state)
 {
+    auto raw_state = (unsigned) state;
+
     unsigned modifiers = 0;
-    if (event.modifiers() & Qt::Modifier::ALT)
-        modifiers |= 1;
-    if (event.modifiers() & Qt::Modifier::CTRL)
-        modifiers |= 2;
-    if (event.modifiers() & Qt::Modifier::SHIFT)
-        modifiers |= 4;
-    return modifiers;
-}
-
-unsigned get_modifiers_from_qt_keyboard_event(QKeyEvent const& event)
-{
-    auto modifiers = 0;
-    if (event.modifiers().testFlag(Qt::AltModifier))
+    if (raw_state & (unsigned) Gdk::ModifierType::ALT_MASK)
         modifiers |= KeyModifier::Mod_Alt;
-    if (event.modifiers().testFlag(Qt::ControlModifier))
+    if (raw_state & (unsigned) Gdk::ModifierType::CONTROL_MASK)
         modifiers |= KeyModifier::Mod_Ctrl;
-    if (event.modifiers().testFlag(Qt::MetaModifier))
-        modifiers |= KeyModifier::Mod_Super;
-    if (event.modifiers().testFlag(Qt::ShiftModifier))
+    if (raw_state & (unsigned) Gdk::ModifierType::SHIFT_MASK)
         modifiers |= KeyModifier::Mod_Shift;
-    if (event.modifiers().testFlag(Qt::AltModifier))
-        modifiers |= KeyModifier::Mod_AltGr;
+    if (raw_state & (unsigned) Gdk::ModifierType::META_MASK)
+        modifiers |= KeyModifier::Mod_Super;
+
     return modifiers;
 }
 
-KeyCode get_keycode_from_qt_keyboard_event(QKeyEvent const& event)
+KeyCode translate_keyval(unsigned int keyval)
 {
     struct Mapping {
-        constexpr Mapping(Qt::Key q, KeyCode s)
-            : qt_key(q)
+        constexpr Mapping(int q, KeyCode s)
+            : gdk_key(q)
             , serenity_key(s)
         {
         }
 
-        Qt::Key qt_key;
+        int gdk_key;
         KeyCode serenity_key;
     };
 
+    // TODO: These might be a bit broken
     constexpr Mapping mappings[] = {
-        { Qt::Key_0, Key_0 },
-        { Qt::Key_1, Key_1 },
-        { Qt::Key_2, Key_2 },
-        { Qt::Key_3, Key_3 },
-        { Qt::Key_4, Key_4 },
-        { Qt::Key_5, Key_5 },
-        { Qt::Key_6, Key_6 },
-        { Qt::Key_7, Key_7 },
-        { Qt::Key_8, Key_8 },
-        { Qt::Key_9, Key_9 },
-        { Qt::Key_A, Key_A },
-        { Qt::Key_Alt, Key_Alt },
-        { Qt::Key_Ampersand, Key_Ampersand },
-        { Qt::Key_Apostrophe, Key_Apostrophe },
-        { Qt::Key_AsciiCircum, Key_Circumflex },
-        { Qt::Key_AsciiTilde, Key_Tilde },
-        { Qt::Key_Asterisk, Key_Asterisk },
-        { Qt::Key_At, Key_AtSign },
-        { Qt::Key_B, Key_B },
-        { Qt::Key_Backslash, Key_Backslash },
-        { Qt::Key_Backspace, Key_Backspace },
-        { Qt::Key_Bar, Key_Pipe },
-        { Qt::Key_BraceLeft, Key_LeftBrace },
-        { Qt::Key_BraceRight, Key_RightBrace },
-        { Qt::Key_BracketLeft, Key_LeftBracket },
-        { Qt::Key_BracketRight, Key_RightBracket },
-        { Qt::Key_C, Key_C },
-        { Qt::Key_CapsLock, Key_CapsLock },
-        { Qt::Key_Colon, Key_Colon },
-        { Qt::Key_Comma, Key_Comma },
-        { Qt::Key_Control, Key_Control },
-        { Qt::Key_D, Key_D },
-        { Qt::Key_Delete, Key_Delete },
-        { Qt::Key_Dollar, Key_Dollar },
-        { Qt::Key_Down, Key_Down },
-        { Qt::Key_E, Key_E },
-        { Qt::Key_End, Key_End },
-        { Qt::Key_Equal, Key_Equal },
-        { Qt::Key_Escape, Key_Escape },
-        { Qt::Key_exclamdown, Key_ExclamationPoint },
-        { Qt::Key_F, Key_F },
-        { Qt::Key_F1, Key_F1 },
-        { Qt::Key_F10, Key_F10 },
-        { Qt::Key_F11, Key_F11 },
-        { Qt::Key_F12, Key_F12 },
-        { Qt::Key_F2, Key_F2 },
-        { Qt::Key_F3, Key_F3 },
-        { Qt::Key_F4, Key_F4 },
-        { Qt::Key_F5, Key_F5 },
-        { Qt::Key_F6, Key_F6 },
-        { Qt::Key_F7, Key_F7 },
-        { Qt::Key_F8, Key_F8 },
-        { Qt::Key_F9, Key_F9 },
-        { Qt::Key_G, Key_G },
-        { Qt::Key_Greater, Key_GreaterThan },
-        { Qt::Key_H, Key_H },
-        { Qt::Key_Home, Key_Home },
-        { Qt::Key_I, Key_I },
-        { Qt::Key_Insert, Key_Insert },
-        { Qt::Key_J, Key_J },
-        { Qt::Key_K, Key_K },
-        { Qt::Key_L, Key_L },
-        { Qt::Key_Left, Key_Left },
-        { Qt::Key_Less, Key_LessThan },
-        { Qt::Key_M, Key_M },
-        { Qt::Key_Menu, Key_Menu },
-        { Qt::Key_Minus, Key_Minus },
-        { Qt::Key_N, Key_N },
-        { Qt::Key_NumLock, Key_NumLock },
-        { Qt::Key_O, Key_O },
-        { Qt::Key_P, Key_P },
-        { Qt::Key_PageDown, Key_PageDown },
-        { Qt::Key_PageUp, Key_PageUp },
-        { Qt::Key_ParenLeft, Key_LeftParen },
-        { Qt::Key_ParenRight, Key_RightParen },
-        { Qt::Key_Percent, Key_Percent },
-        { Qt::Key_Period, Key_Period },
-        { Qt::Key_Plus, Key_Plus },
-        { Qt::Key_Print, Key_PrintScreen },
-        { Qt::Key_Q, Key_Q },
-        { Qt::Key_Question, Key_QuestionMark },
-        { Qt::Key_QuoteDbl, Key_DoubleQuote },
-        { Qt::Key_R, Key_R },
-        { Qt::Key_Return, Key_Return },
-        { Qt::Key_Right, Key_Right },
-        { Qt::Key_S, Key_S },
-        { Qt::Key_ScrollLock, Key_ScrollLock },
-        { Qt::Key_Semicolon, Key_Semicolon },
-        { Qt::Key_Shift, Key_LeftShift },
-        { Qt::Key_Slash, Key_Slash },
-        { Qt::Key_Space, Key_Space },
-        { Qt::Key_Super_L, Key_Super },
-        { Qt::Key_SysReq, Key_SysRq },
-        { Qt::Key_T, Key_T },
-        { Qt::Key_Tab, Key_Tab },
-        { Qt::Key_U, Key_U },
-        { Qt::Key_Underscore, Key_Underscore },
-        { Qt::Key_Up, Key_Up },
-        { Qt::Key_V, Key_V },
-        { Qt::Key_W, Key_W },
-        { Qt::Key_X, Key_X },
-        { Qt::Key_Y, Key_Y },
-        { Qt::Key_Z, Key_Z },
+        { GDK_KEY_0, Key_0 },
+        { GDK_KEY_1, Key_1 },
+        { GDK_KEY_2, Key_2 },
+        { GDK_KEY_3, Key_3 },
+        { GDK_KEY_4, Key_4 },
+        { GDK_KEY_5, Key_5 },
+        { GDK_KEY_6, Key_6 },
+        { GDK_KEY_7, Key_7 },
+        { GDK_KEY_8, Key_8 },
+        { GDK_KEY_9, Key_9 },
+        { GDK_KEY_a, Key_A },
+        { GDK_KEY_Alt_L, Key_Alt },
+        { GDK_KEY_ampersand, Key_Ampersand },
+        { GDK_KEY_apostrophe, Key_Apostrophe },
+        { GDK_KEY_dead_circumflex, Key_Circumflex },
+        { GDK_KEY_asciitilde, Key_Tilde },
+        { GDK_KEY_asterisk, Key_Asterisk },
+        { GDK_KEY_at, Key_AtSign },
+        { GDK_KEY_b, Key_B },
+        { GDK_KEY_backslash, Key_Backslash },
+        { GDK_KEY_BackSpace, Key_Backspace },
+        { GDK_KEY_bar, Key_Pipe },
+        { GDK_KEY_braceleft, Key_LeftBrace },
+        { GDK_KEY_braceright, Key_RightBrace },
+        { GDK_KEY_bracketleft, Key_LeftBracket },
+        { GDK_KEY_bracketright, Key_RightBracket },
+        { GDK_KEY_c, Key_C },
+        { GDK_KEY_Caps_Lock, Key_CapsLock },
+        { GDK_KEY_colon, Key_Colon },
+        { GDK_KEY_comma, Key_Comma },
+        { GDK_KEY_Control_L, Key_Control },
+        { GDK_KEY_d, Key_D },
+        { GDK_KEY_Delete, Key_Delete },
+        { GDK_KEY_dollar, Key_Dollar },
+        { GDK_KEY_Down, Key_Down },
+        { GDK_KEY_e, Key_E },
+        { GDK_KEY_End, Key_End },
+        { GDK_KEY_equal, Key_Equal },
+        { GDK_KEY_Escape, Key_Escape },
+        { GDK_KEY_exclamdown, Key_ExclamationPoint },
+        { GDK_KEY_f, Key_F },
+        { GDK_KEY_F1, Key_F1 },
+        { GDK_KEY_F10, Key_F10 },
+        { GDK_KEY_F11, Key_F11 },
+        { GDK_KEY_F12, Key_F12 },
+        { GDK_KEY_F2, Key_F2 },
+        { GDK_KEY_F3, Key_F3 },
+        { GDK_KEY_F4, Key_F4 },
+        { GDK_KEY_F5, Key_F5 },
+        { GDK_KEY_F6, Key_F6 },
+        { GDK_KEY_F7, Key_F7 },
+        { GDK_KEY_F8, Key_F8 },
+        { GDK_KEY_F9, Key_F9 },
+        { GDK_KEY_G, Key_G },
+        { GDK_KEY_greater, Key_GreaterThan },
+        { GDK_KEY_H, Key_H },
+        { GDK_KEY_Home, Key_Home },
+        { GDK_KEY_I, Key_I },
+        { GDK_KEY_Insert, Key_Insert },
+        { GDK_KEY_J, Key_J },
+        { GDK_KEY_K, Key_K },
+        { GDK_KEY_L, Key_L },
+        { GDK_KEY_Left, Key_Left },
+        { GDK_KEY_less, Key_LessThan },
+        { GDK_KEY_M, Key_M },
+        { GDK_KEY_Menu, Key_Menu },
+        { GDK_KEY_minus, Key_Minus },
+        { GDK_KEY_N, Key_N },
+        { GDK_KEY_Num_Lock, Key_NumLock },
+        { GDK_KEY_O, Key_O },
+        { GDK_KEY_P, Key_P },
+        { GDK_KEY_Page_Down, Key_PageDown },
+        { GDK_KEY_Page_Up, Key_PageUp },
+        { GDK_KEY_parenleft, Key_LeftParen },
+        { GDK_KEY_parenright, Key_RightParen },
+        { GDK_KEY_percent, Key_Percent },
+        { GDK_KEY_period, Key_Period },
+        { GDK_KEY_plus, Key_Plus },
+        { GDK_KEY_Print, Key_PrintScreen },
+        { GDK_KEY_Q, Key_Q },
+        { GDK_KEY_question, Key_QuestionMark },
+        { GDK_KEY_quotedbl, Key_DoubleQuote },
+        { GDK_KEY_R, Key_R },
+        { GDK_KEY_Return, Key_Return },
+        { GDK_KEY_Right, Key_Right },
+        { GDK_KEY_S, Key_S },
+        { GDK_KEY_Scroll_Lock, Key_ScrollLock },
+        { GDK_KEY_semicolon, Key_Semicolon },
+        { GDK_KEY_Shift_L, Key_LeftShift },
+        { GDK_KEY_slash, Key_Slash },
+        { GDK_KEY_space, Key_Space },
+        { GDK_KEY_Super_L, Key_Super },
+        { GDK_KEY_Sys_Req, Key_SysRq },
+        { GDK_KEY_T, Key_T },
+        { GDK_KEY_Tab, Key_Tab },
+        { GDK_KEY_U, Key_U },
+        { GDK_KEY_underscore, Key_Underscore },
+        { GDK_KEY_Up, Key_Up },
+        { GDK_KEY_V, Key_V },
+        { GDK_KEY_W, Key_W },
+        { GDK_KEY_X, Key_X },
+        { GDK_KEY_Y, Key_Y },
+        { GDK_KEY_Z, Key_Z },
     };
 
     for (auto const& mapping : mappings) {
-        if (event.key() == mapping.qt_key)
+        if ((int) keyval == mapping.gdk_key)
             return mapping.serenity_key;
     }
+    dbgln("Keyval {} is invalid", keyval);
     return Key_Invalid;
 }
 
-void WebContentView::mouseMoveEvent(QMouseEvent* event)
+bool WebContentView::on_key_pressed(guint keyval, guint, Gdk::ModifierType state)
 {
-    Gfx::IntPoint position(event->position().x() / m_inverse_pixel_scaling_ratio, event->position().y() / m_inverse_pixel_scaling_ratio);
-    auto buttons = get_buttons_from_gdk_event(*event);
-    auto modifiers = get_modifiers_from_qt_mouse_event(*event);
-    client().async_mouse_move(to_content_position(position), 0, buttons, modifiers);
+//    switch (keyval) {
+//        case GDK_KEY_Left:
+//        case GDK_KEY_Right:
+//        case GDK_KEY_Up:
+//        case GDK_KEY_Down:
+//        case GDK_KEY_Page_Up:
+//        case GDK_KEY_Page_Down:
+//            // QAbstractScrollArea::keyPressEvent(event);
+//            break;
+//        default:
+//            break;
+//    }
+
+//    if (event->key() == GDK_KEY_Backtab) {
+//        // NOTE: Qt transforms Shift+Tab into a "Backtab", so we undo that transformation here.
+//        client().async_key_down(KeyCode::Key_Tab, Mod_Shift, '\t');
+//        return;
+//    }
+
+    gunichar point = gdk_keyval_to_unicode(keyval);
+    auto key = translate_keyval(keyval);
+    auto modifiers = translate_modifiers(state);
+    client().async_key_down(key, modifiers, point);
+
+    return true;
 }
 
-void WebContentView::mousePressEvent(QMouseEvent* event)
+void WebContentView::on_key_released(guint keyval, guint, Gdk::ModifierType state)
 {
-    Gfx::IntPoint position(event->position().x() / m_inverse_pixel_scaling_ratio, event->position().y() / m_inverse_pixel_scaling_ratio);
-    auto button = get_button_from_gdk_event(*event);
+    gunichar point = gdk_keyval_to_unicode(keyval);
+    auto key = translate_keyval(keyval);
+    auto modifiers = translate_modifiers(state);
+    client().async_key_up(key, modifiers, point);
+}
+
+void WebContentView::on_pressed(int n_press, double x, double y)
+{
+    Gfx::IntPoint position(x / m_inverse_pixel_scaling_ratio, y / m_inverse_pixel_scaling_ratio);
+    auto button = translate_button(m_click_gesture->get_button());
     if (button == 0) {
-        // We could not convert Qt buttons to something that Lagom can
+        // We could not convert Gtk buttons to something that Lagom can
         // recognize - don't even bother propagating this to the web engine
         // as it will not handle it anyway, and it will (currently) assert
         return;
     }
-    auto modifiers = get_modifiers_from_qt_mouse_event(*event);
-    auto buttons = get_buttons_from_gdk_event(*event);
-    client().async_mouse_down(to_content_position(position), button, buttons, modifiers);
+
+    auto state = m_click_gesture->get_current_event_state();
+    auto modifiers = translate_modifiers(state);
+    auto buttons = translate_buttons(state);
+
+    if (n_press > 1) {
+        client().async_doubleclick(to_content_position(position), button, buttons, modifiers);
+    } else {
+        client().async_mouse_down(to_content_position(position), button, buttons, modifiers);
+    }
 }
 
-void WebContentView::mouseReleaseEvent(QMouseEvent* event)
+void WebContentView::on_release(int n_press, double x, double y)
 {
-    Gfx::IntPoint position(event->position().x() / m_inverse_pixel_scaling_ratio, event->position().y() / m_inverse_pixel_scaling_ratio);
-    auto button = get_button_from_gdk_event(*event);
+    if (n_press > 1)
+        return;
 
-    if (event->button() & Qt::MouseButton::BackButton) {
+    Gfx::IntPoint position(x / m_inverse_pixel_scaling_ratio, y / m_inverse_pixel_scaling_ratio);
+    auto button = translate_button(m_click_gesture->get_button());
+
+    if (button == WEB_GDK_BUTTON_BACKWARD) {
         if (on_back_button)
             on_back_button();
-    } else if (event->button() & Qt::MouseButton::ForwardButton) {
+    } else if (button == WEB_GDK_BUTTON_FORWARD) {
         if (on_forward_button)
             on_forward_button();
     }
@@ -297,27 +349,23 @@ void WebContentView::mouseReleaseEvent(QMouseEvent* event)
         // as it will not handle it anyway, and it will (currently) assert
         return;
     }
-    auto modifiers = get_modifiers_from_qt_mouse_event(*event);
-    auto buttons = get_buttons_from_gdk_event(*event);
+    auto state = m_click_gesture->get_current_event_state();
+    auto modifiers = translate_modifiers(state);
+    auto buttons = translate_buttons(state);
     client().async_mouse_up(to_content_position(position), button, buttons, modifiers);
 }
 
-void WebContentView::mouseDoubleClickEvent(QMouseEvent* event)
+void WebContentView::on_motion(double x, double y)
 {
-    Gfx::IntPoint position(event->position().x() / m_inverse_pixel_scaling_ratio, event->position().y() / m_inverse_pixel_scaling_ratio);
-    auto button = get_button_from_gdk_event(*event);
-    if (button == 0) {
-        // We could not convert Qt buttons to something that Lagom can
-        // recognize - don't even bother propagating this to the web engine
-        // as it will not handle it anyway, and it will (currently) assert
-        return;
-    }
-    auto modifiers = get_modifiers_from_qt_mouse_event(*event);
-    auto buttons = get_buttons_from_gdk_event(*event);
-    client().async_doubleclick(to_content_position(position), button, buttons, modifiers);
+    Gfx::IntPoint position(x / m_inverse_pixel_scaling_ratio, y / m_inverse_pixel_scaling_ratio);
+
+    auto state = m_click_gesture->get_current_event_state();
+    auto buttons = translate_buttons(state);
+    auto modifiers = translate_modifiers(state);
+    client().async_mouse_move(to_content_position(position), 0, buttons, modifiers);
 }
 
-void WebContentView::dragEnterEvent(QDragEnterEvent* event)
+/*void WebContentView::dragEnterEvent(QDragEnterEvent* event)
 {
     if (event->mimeData()->hasUrls())
         event->acceptProposedAction();
@@ -330,49 +378,6 @@ void WebContentView::dropEvent(QDropEvent* event)
     event->acceptProposedAction();
 }
 
-void WebContentView::keyPressEvent(QKeyEvent* event)
-{
-    switch (event->key()) {
-    case Qt::Key_Left:
-    case Qt::Key_Right:
-    case Qt::Key_Up:
-    case Qt::Key_Down:
-    case Qt::Key_PageUp:
-    case Qt::Key_PageDown:
-        QAbstractScrollArea::keyPressEvent(event);
-        break;
-    default:
-        break;
-    }
-
-    if (event->key() == Qt::Key_Backtab) {
-        // NOTE: Qt transforms Shift+Tab into a "Backtab", so we undo that transformation here.
-        client().async_key_down(KeyCode::Key_Tab, Mod_Shift, '\t');
-        return;
-    }
-
-    auto text = event->text();
-    if (text.isEmpty()) {
-        return;
-    }
-    auto point = event->text()[0].unicode();
-    auto keycode = get_keycode_from_qt_keyboard_event(*event);
-    auto modifiers = get_modifiers_from_qt_keyboard_event(*event);
-    client().async_key_down(keycode, modifiers, point);
-}
-
-void WebContentView::keyReleaseEvent(QKeyEvent* event)
-{
-    auto text = event->text();
-    if (text.isEmpty()) {
-        return;
-    }
-    auto point = event->text()[0].unicode();
-    auto keycode = get_keycode_from_qt_keyboard_event(*event);
-    auto modifiers = get_modifiers_from_qt_keyboard_event(*event);
-    client().async_key_up(keycode, modifiers, point);
-}
-
 void WebContentView::focusInEvent(QFocusEvent*)
 {
     client().async_set_has_focus(true);
@@ -381,40 +386,6 @@ void WebContentView::focusInEvent(QFocusEvent*)
 void WebContentView::focusOutEvent(QFocusEvent*)
 {
     client().async_set_has_focus(false);
-}
-
-void WebContentView::paintEvent(QPaintEvent*)
-{
-    QPainter painter(viewport());
-    painter.scale(m_inverse_pixel_scaling_ratio, m_inverse_pixel_scaling_ratio);
-
-    Gfx::Bitmap const* bitmap = nullptr;
-    Gfx::IntSize bitmap_size;
-
-    if (m_client_state.has_usable_bitmap) {
-        bitmap = m_client_state.front_bitmap.bitmap.ptr();
-        bitmap_size = m_client_state.front_bitmap.last_painted_size;
-
-    } else {
-        bitmap = m_backup_bitmap.ptr();
-        bitmap_size = m_backup_bitmap_size;
-    }
-
-    if (bitmap) {
-        QImage q_image(bitmap->scanline_u8(0), bitmap->width(), bitmap->height(), QImage::Format_RGB32);
-        painter.drawImage(QPoint(0, 0), q_image, QRect(0, 0, bitmap_size.width(), bitmap_size.height()));
-
-        if (bitmap_size.width() < width()) {
-            painter.fillRect(bitmap_size.width(), 0, width() - bitmap_size.width(), bitmap->height(), palette().base());
-        }
-        if (bitmap_size.height() < height()) {
-            painter.fillRect(0, bitmap_size.height(), width(), height() - bitmap_size.height(), palette().base());
-        }
-
-        return;
-    }
-
-    painter.fillRect(rect(), palette().base());
 }*/
 
 void WebContentView::resize_event(int, int)
@@ -429,6 +400,9 @@ void WebContentView::draw_func(const Cairo::RefPtr<Cairo::Context>& cr, int widt
     (void) height;
 
     cr->save();
+
+    cr->set_source_rgb(255, 255, 255);
+    cr->paint();
 
     cr->scale(m_inverse_pixel_scaling_ratio, m_inverse_pixel_scaling_ratio);
 //    cr->set_source_rgb(255, 0, 0);
@@ -448,10 +422,13 @@ void WebContentView::draw_func(const Cairo::RefPtr<Cairo::Context>& cr, int widt
     }
 
     if (bitmap) {
-        dbgln("Bitmap");
         auto pixbuf = Gdk::Pixbuf::create_from_data(bitmap->scanline_u8(0), Gdk::Colorspace::RGB, true, 8, bitmap->width(), bitmap->height(), 4 * bitmap->width());
         Gdk::Cairo::set_source_pixbuf(cr, pixbuf, 0, 0);
         cr->paint();
+
+//        auto surface = Cairo::ImageSurface::create(Cairo::Surface::Format::ARGB32, bitmap->width(), bitmap->height());
+//        cr->set_source(surface, 0, 0);
+//        cr->paint();
 
 //        if (bitmap_size.width() < width()) {
 //            painter.fillRect(bitmap_size.width(), 0, width() - bitmap_size.width(), bitmap->height(), palette().base());
@@ -462,7 +439,6 @@ void WebContentView::draw_func(const Cairo::RefPtr<Cairo::Context>& cr, int widt
 
         return;
     }
-    dbgln("No Bitmap");
 
     cr->restore();
 }
@@ -595,7 +571,7 @@ void WebContentView::create_client(WebView::EnableCallgrindProfiling enable_call
 
 void WebContentView::notify_server_did_paint(Badge<WebContentClient>, i32 bitmap_id, Gfx::IntSize size)
 {
-    dbgln("Paint");
+    queue_draw();
     if (m_client_state.back_bitmap.id == bitmap_id) {
         m_client_state.has_usable_bitmap = true;
         m_client_state.back_bitmap.pending_paints--;
@@ -603,7 +579,6 @@ void WebContentView::notify_server_did_paint(Badge<WebContentClient>, i32 bitmap
         swap(m_client_state.back_bitmap, m_client_state.front_bitmap);
         // We don't need the backup bitmap anymore, so drop it.
         m_backup_bitmap = nullptr;
-        queue_draw(); // TODO: Do this here?
 
         if (m_client_state.got_repaint_requests_while_painting) {
             m_client_state.got_repaint_requests_while_painting = false;
@@ -726,7 +701,7 @@ void WebContentView::notify_server_did_enter_tooltip_area(Badge<WebContentClient
 
 void WebContentView::notify_server_did_leave_tooltip_area(Badge<WebContentClient>)
 {
-    set_tooltip_text(nullptr);
+    set_tooltip_text("");
 }
 
 void WebContentView::notify_server_did_request_alert(Badge<WebContentClient>, String const& message)
