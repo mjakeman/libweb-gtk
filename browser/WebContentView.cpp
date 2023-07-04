@@ -678,11 +678,11 @@ void WebContentView::notify_server_did_request_cursor_change(Badge<WebContentCli
 void WebContentView::notify_server_did_layout(Badge<WebContentClient>, Gfx::IntSize content_size)
 {
     m_vertical_adj->set_lower(0);
-    m_vertical_adj->set_upper(content_size.height() - m_viewport_rect.height());
-    m_vertical_adj->set_page_increment(m_viewport_rect.height());
+    m_vertical_adj->set_upper(content_size.height());
+    m_vertical_adj->set_page_size(m_viewport_rect.height());
     m_horizontal_adj->set_lower(0);
-    m_horizontal_adj->set_upper(content_size.width() - m_viewport_rect.width());
-    m_horizontal_adj->set_page_increment(m_viewport_rect.width());
+    m_horizontal_adj->set_upper(content_size.width());
+    m_horizontal_adj->set_page_size(m_viewport_rect.width());
 }
 
 void WebContentView::notify_server_did_request_scroll(Badge<WebContentClient>, i32 x_delta, i32 y_delta)
