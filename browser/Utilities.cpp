@@ -21,6 +21,16 @@ ErrorOr<String> ak_string_from_cstring(const char *cstring)
     return String::from_utf8(StringView(cstring, strlen(cstring)));
 }
 
+ErrorOr<AK::DeprecatedString> ak_deprecated_string_from_ustring(Glib::ustring ustring)
+{
+    return ak_deprecated_string_from_cstring(ustring.c_str());
+}
+
+ErrorOr<String> ak_string_from_ustring(Glib::ustring ustring)
+{
+    return ak_string_from_cstring(ustring.c_str());
+}
+
 Glib::ustring ustring_from_ak_deprecated_string(AK::DeprecatedString const& ak_deprecated_string)
 {
     return {ak_deprecated_string.characters(), ak_deprecated_string.length()};

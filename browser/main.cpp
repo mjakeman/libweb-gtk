@@ -26,6 +26,9 @@
 #include <LibSQL/SQLClient.h>
 #include <gtkmm/application.h>
 #include <gtkmm/window.h>
+#include <gtkmm/box.h>
+#include <gtkmm/entry.h>
+#include <gtkmm/button.h>
 
 #include "WebContentView.h"
 
@@ -119,13 +122,43 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
         use_javascript_bytecode ? WebView::UseJavaScriptBytecode::Yes : WebView::UseJavaScriptBytecode::No
     );
 
+    Gtk::Entry navigation = Gtk::Entry();
+    navigation.set_hexpand(true);
+
+    Gtk::Button button = Gtk::Button("Go!");
+    button.signal_clicked().connect([&]() {
+        auto url = navigation.get_buffer().get()->get_text();
+        // TODO: Make this more robust!
+        if (url.find_first_of("/") == 0) {
+            url = Glib::ustring("file://") + url;
+        }
+        else {
+            url = "https://" + url;
+        }
+        view.load(ak_deprecated_string_from_ustring(url).value());
+    });
+
+    view.on_load_start = [&](URL url, bool) {
+        navigation.get_buffer()->set_text(ustring_from_ak_string(url.to_string().value()));
+    };
+
+    Gtk::Box controls = Gtk::Box(Gtk::Orientation::HORIZONTAL);
+    controls.add_css_class("toolbar");
+    controls.append(navigation);
+    controls.append(button);
+
     Gtk::ScrolledWindow scroll_area = Gtk::ScrolledWindow();
     scroll_area.set_child(view);
+    scroll_area.set_vexpand(true);
+
+    Gtk::Box box = Gtk::Box(Gtk::Orientation::VERTICAL);
+    box.append(controls);
+    box.append(scroll_area);
 
     Gtk::Window window = Gtk::Window();
     window.set_title("LibWeb GTK");
     window.set_default_size(800, 600);
-    window.set_child(scroll_area);
+    window.set_child(box);
     window.signal_destroy().connect([&]{
         event_loop.quit(0);
     });

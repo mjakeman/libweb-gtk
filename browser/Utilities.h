@@ -10,10 +10,12 @@
 #include <AK/String.h>
 #include <glibmm/ustring.h>
 
-AK::DeprecatedString ak_deprecated_string_from_cstring(const char*);
-ErrorOr<String> ak_string_from_cstring(const char*);
-Glib::ustring ustring_from_ak_deprecated_string(AK::DeprecatedString const&);
-Glib::ustring ustring_from_ak_string(String const&);
+AK::DeprecatedString ak_deprecated_string_from_cstring(const char *cstring);
+ErrorOr<String> ak_string_from_cstring(const char *cstring);
+ErrorOr<AK::DeprecatedString> ak_deprecated_string_from_ustring(Glib::ustring ustring);
+ErrorOr<String> ak_string_from_ustring(Glib::ustring ustring);
+Glib::ustring ustring_from_ak_deprecated_string(AK::DeprecatedString const& ak_deprecated_string);
+Glib::ustring ustring_from_ak_string(String const& ak_string);
 char* owned_cstring_from_ak_string(String const& ak_string);
 void platform_init();
 
