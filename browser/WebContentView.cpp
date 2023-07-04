@@ -84,7 +84,7 @@ WebContentView::WebContentView(StringView webdriver_content_ipc_path, WebView::E
 
     m_click_gesture = Gtk::GestureClick::create();
     m_click_gesture->signal_pressed().connect(sigc::mem_fun(*this, &WebContentView::on_pressed), false);
-    m_click_gesture->signal_pressed().connect(sigc::mem_fun(*this, &WebContentView::on_release), false);
+    m_click_gesture->signal_released().connect(sigc::mem_fun(*this, &WebContentView::on_release), false);
     add_controller(m_click_gesture);
 
     create_client(enable_callgrind_profiling, use_javascript_bytecode);
