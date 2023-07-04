@@ -510,23 +510,23 @@ static Core::AnonymousBuffer make_system_theme_from_gtk_palette(Gtk::Widget& wid
         return (a << 24) | (r << 16) | (g << 8) | b;
     };
 
-    auto translate = [&](Gfx::ColorRole gfx_color_role, const char *gtk_color_role) {
-        Gdk::RGBA rgba;
-        style_context->lookup_color(gtk_color_role, rgba);
+    auto translate = [&](Gfx::ColorRole gfx_color_role, Gdk::RGBA rgba /*const char *gtk_color_role*/) {
+        // Gdk::RGBA rgba;
+        // style_context->lookup_color(gtk_color_role, rgba);
         auto new_color = Gfx::Color::from_argb(pack_rgba(rgba));
         palette.set_color(gfx_color_role, new_color);
     };
 
-    translate(Gfx::ColorRole::ThreedHighlight, "window_bg_color");
-    translate(Gfx::ColorRole::ThreedShadow1, "headerbar_bg_color");
-    translate(Gfx::ColorRole::ThreedShadow2, "headerbar_shade_color");
-    translate(Gfx::ColorRole::HoverHighlight, "window_bg_color");
-    translate(Gfx::ColorRole::Link, "link_color");
-    translate(Gfx::ColorRole::VisitedLink, "link_visited_color");
-    translate(Gfx::ColorRole::Button, "view_bg_color");
-    translate(Gfx::ColorRole::ButtonText, "view_fg_color");
-    translate(Gfx::ColorRole::Selection, "accent_bg_color");
-    translate(Gfx::ColorRole::SelectionText, "accent_fg_color");
+    translate(Gfx::ColorRole::ThreedHighlight, Gdk::RGBA("lightgrey"));
+    translate(Gfx::ColorRole::ThreedShadow1, Gdk::RGBA("grey"));
+    translate(Gfx::ColorRole::ThreedShadow2, Gdk::RGBA("darkgrey"));
+    translate(Gfx::ColorRole::HoverHighlight, Gdk::RGBA("lightgrey"));
+    translate(Gfx::ColorRole::Link, Gdk::RGBA("blue"));
+    translate(Gfx::ColorRole::VisitedLink, Gdk::RGBA("purple"));
+    translate(Gfx::ColorRole::Button, Gdk::RGBA("lightgrey"));
+    translate(Gfx::ColorRole::ButtonText, Gdk::RGBA("black"));
+    translate(Gfx::ColorRole::Selection, Gdk::RGBA("lightblue"));
+    translate(Gfx::ColorRole::SelectionText, Gdk::RGBA("black"));
 
     palette.set_flag(Gfx::FlagRole::IsDark, is_using_dark_system_theme(widget));
 
