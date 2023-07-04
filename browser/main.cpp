@@ -126,9 +126,12 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     window.set_title("LibWeb GTK");
     window.set_default_size(800, 600);
     window.set_child(scroll_area);
+    window.signal_destroy().connect([&]{
+        event_loop.quit(0);
+    });
     window.present();
 
-    view.load(AK::DeprecatedString("https://mattjakeman.com/"));
+    view.load(AK::DeprecatedString("https://google.com/"));
 
     if (auto url = TRY(get_formatted_url(raw_url)); url.is_valid()) {
         //window.view().load(url);

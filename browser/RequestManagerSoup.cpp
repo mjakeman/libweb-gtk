@@ -50,9 +50,6 @@ ErrorOr<NonnullRefPtr<RequestManagerSoup::Request>> RequestManagerSoup::create_r
         soup_message_headers_append(soup_request_headers, it.key.characters(), it.value.characters());
     }
 
-    /* NOTE: We explicitly disable HTTP2 as it's significantly slower (up to 5x, possibly more) */
-    // TODO: How to do this in Soup?
-
     char *c_url = owned_cstring_from_ak_string(url.to_string().value());
 
     if (method.equals_ignoring_ascii_case("head"sv)) {
@@ -83,6 +80,9 @@ ErrorOr<NonnullRefPtr<RequestManagerSoup::Request>> RequestManagerSoup::create_r
     }
 
     g_free(c_url);
+
+    /* NOTE: We explicitly disable HTTP2 as it's significantly slower (up to 5x, possibly more) */
+    soup_message_set_force_http1 (msg, true);
 
     soup_session_send_and_read_async (
             session,
