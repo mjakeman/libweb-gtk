@@ -131,7 +131,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     });
     window.present();
 
-    view.load(AK::DeprecatedString("https://google.com/"));
+    view.load(AK::DeprecatedString("https://mattjakeman.com/"));
 
     if (auto url = TRY(get_formatted_url(raw_url)); url.is_valid()) {
         //window.view().load(url);
@@ -142,7 +142,7 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     return event_loop.exec();
 }
 
-bool is_using_dark_system_theme()
+bool is_using_dark_system_theme(Gtk::Widget&)
 {
     // TODO: Allow querying libadwaita if present
     return false;

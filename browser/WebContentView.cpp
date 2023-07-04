@@ -421,9 +421,18 @@ void WebContentView::snapshot_vfunc(const Glib::RefPtr<Gtk::Snapshot>& snapshot)
     }
 
     if (bitmap) {
-        auto bytes = Glib::Bytes::create(bitmap->scanline_u8(0), bitmap->size_in_bytes());
-        auto texture = Gdk::MemoryTexture::create(bitmap->width(), bitmap->height(), Gdk::MemoryTexture::Format::B8G8R8A8, bytes, 4 * bitmap->width());
-        snapshot->append_texture(texture, { 0, 0, bitmap_size.width(), bitmap_size.height() });
+        auto cr = snapshot->append_cairo({ 0, 0, bitmap_size.width(), bitmap_size.height() });
+
+        size_t size = bitmap->size_in_bytes();
+        const uint8_t* src = bitmap->scanline_u8(0);
+
+        // Copy into temporary buffer
+        uint8_t* dest = new uint8_t[size];
+        std::memcpy(dest, src, size);
+
+        auto cairo_bitmap = Cairo::ImageSurface::create(dest, Cairo::Surface::Format::RGB24, bitmap->width(), bitmap->height(), 4 * bitmap->width());
+        cr->set_source(cairo_bitmap, 0, 0);
+        cr->paint();
 
         if (bitmap_size.width() < rect.get_width()) {
             snapshot->append_color(Gdk::RGBA("white"), { bitmap_size.width(), 0, get_width() - bitmap_size.width(), bitmap->height() });
@@ -431,7 +440,11 @@ void WebContentView::snapshot_vfunc(const Glib::RefPtr<Gtk::Snapshot>& snapshot)
         if (bitmap_size.height() < rect.get_height()) {
             snapshot->append_color(Gdk::RGBA("white"), { 0, bitmap_size.height(), get_width(), get_height() - bitmap_size.height() });
         }
+
+        return;
     }
+
+    snapshot->append_color(Gdk::RGBA("white"), rect);
 }
 
 void WebContentView::set_viewport_rect(Gfx::IntRect rect)
@@ -478,40 +491,50 @@ void WebContentView::hide_event()
     client().async_set_system_visibility_state(false);
 }
 
-//static Core::AnonymousBuffer make_system_theme_from_qt_palette(QWidget& widget, WebContentView::PaletteMode mode)
-//{
-//    auto qt_palette = widget.palette();
-//
-//    auto theme_file = mode == WebContentView::PaletteMode::Default ? "Default"sv : "Dark"sv;
-//    auto theme = Gfx::load_system_theme(DeprecatedString::formatted("{}/res/themes/{}.ini", s_serenity_resource_root, theme_file)).release_value_but_fixme_should_propagate_errors();
-//    auto palette_impl = Gfx::PaletteImpl::create_with_anonymous_buffer(theme);
-//    auto palette = Gfx::Palette(move(palette_impl));
-//
-//    auto translate = [&](Gfx::ColorRole gfx_color_role, QPalette::ColorRole qt_color_role) {
-//        auto new_color = Gfx::Color::from_argb(qt_palette.color(qt_color_role).rgba());
-//        palette.set_color(gfx_color_role, new_color);
-//    };
-//
-//    translate(Gfx::ColorRole::ThreedHighlight, QPalette::ColorRole::Light);
-//    translate(Gfx::ColorRole::ThreedShadow1, QPalette::ColorRole::Mid);
-//    translate(Gfx::ColorRole::ThreedShadow2, QPalette::ColorRole::Dark);
-//    translate(Gfx::ColorRole::HoverHighlight, QPalette::ColorRole::Light);
-//    translate(Gfx::ColorRole::Link, QPalette::ColorRole::Link);
-//    translate(Gfx::ColorRole::VisitedLink, QPalette::ColorRole::LinkVisited);
-//    translate(Gfx::ColorRole::Button, QPalette::ColorRole::Button);
-//    translate(Gfx::ColorRole::ButtonText, QPalette::ColorRole::ButtonText);
-//    translate(Gfx::ColorRole::Selection, QPalette::ColorRole::Highlight);
-//    translate(Gfx::ColorRole::SelectionText, QPalette::ColorRole::HighlightedText);
-//
-//    palette.set_flag(Gfx::FlagRole::IsDark, is_using_dark_system_theme(widget));
-//
-//    return theme;
-//}
+static Core::AnonymousBuffer make_system_theme_from_gtk_palette(Gtk::Widget& widget, WebContentView::PaletteMode mode)
+{
+    auto style_context = widget.get_style_context();
+
+    auto theme_file = mode == WebContentView::PaletteMode::Default ? "Default"sv : "Dark"sv;
+    auto theme = Gfx::load_system_theme(DeprecatedString::formatted("{}/res/themes/{}.ini", s_serenity_resource_root, theme_file)).release_value_but_fixme_should_propagate_errors();
+    auto palette_impl = Gfx::PaletteImpl::create_with_anonymous_buffer(theme);
+    auto palette = Gfx::Palette(move(palette_impl));
+
+    auto pack_rgba = [&](const Gdk::RGBA& rgba) {
+        uint8_t r = static_cast<uint8_t>(rgba.get_red()   * 255);
+        uint8_t g = static_cast<uint8_t>(rgba.get_green() * 255);
+        uint8_t b = static_cast<uint8_t>(rgba.get_blue()  * 255);
+        uint8_t a = static_cast<uint8_t>(rgba.get_alpha() * 255);
+
+        return (a << 24) | (r << 16) | (g << 8) | b;
+    };
+
+    auto translate = [&](Gfx::ColorRole gfx_color_role, const char *gtk_color_role) {
+        Gdk::RGBA rgba;
+        style_context->lookup_color(gtk_color_role, rgba);
+        auto new_color = Gfx::Color::from_argb(pack_rgba(rgba));
+        palette.set_color(gfx_color_role, new_color);
+    };
+
+    translate(Gfx::ColorRole::ThreedHighlight, "window_bg_color");
+    translate(Gfx::ColorRole::ThreedShadow1, "headerbar_bg_color");
+    translate(Gfx::ColorRole::ThreedShadow2, "headerbar_shade_color");
+    translate(Gfx::ColorRole::HoverHighlight, "window_bg_color");
+    translate(Gfx::ColorRole::Link, "link_color");
+    translate(Gfx::ColorRole::VisitedLink, "link_visited_color");
+    translate(Gfx::ColorRole::Button, "view_bg_color");
+    translate(Gfx::ColorRole::ButtonText, "view_fg_color");
+    translate(Gfx::ColorRole::Selection, "accent_bg_color");
+    translate(Gfx::ColorRole::SelectionText, "accent_fg_color");
+
+    palette.set_flag(Gfx::FlagRole::IsDark, is_using_dark_system_theme(widget));
+
+    return theme;
+}
 
 void WebContentView::update_palette(PaletteMode mode)
 {
-    (void) mode;
-//    client().async_update_system_theme(make_system_theme_from_qt_palette(*this, mode));
+    client().async_update_system_theme(make_system_theme_from_gtk_palette(*this, mode));
 }
 
 void WebContentView::create_client(WebView::EnableCallgrindProfiling enable_callgrind_profiling, WebView::UseJavaScriptBytecode use_javascript_bytecode)
@@ -653,7 +676,6 @@ void WebContentView::notify_server_did_request_cursor_change(Badge<WebContentCli
 
 void WebContentView::notify_server_did_layout(Badge<WebContentClient>, Gfx::IntSize content_size)
 {
-    dbgln("vadj={} current=(l={}, u={}, inc={}) new=(l={}, u={}, inc={})", &m_vertical_adj, m_vertical_adj->get_lower(), m_vertical_adj->get_upper(), m_vertical_adj->get_page_increment(), 0, content_size.height() - m_viewport_rect.height(), m_viewport_rect.height());
     m_vertical_adj->set_lower(0);
     m_vertical_adj->set_upper(content_size.height() - m_viewport_rect.height());
     m_vertical_adj->set_page_increment(m_viewport_rect.height());
