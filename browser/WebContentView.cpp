@@ -51,19 +51,18 @@ WebContentView::WebContentView(StringView webdriver_content_ipc_path, WebView::E
     m_device_pixel_ratio = (float) get_scale_factor();
     m_inverse_pixel_scaling_ratio = 1.0f / m_device_pixel_ratio;
 
-    m_vertical_adj = Gtk::Adjustment::create(0, 0, 100, 24, 24, 24);
-    m_horizontal_adj = Gtk::Adjustment::create(0, 0, 100, 24, 24, 24);
-
-    set_vadjustment(m_vertical_adj);
-    set_hadjustment(m_horizontal_adj);
-
-    m_vertical_adj->property_value().signal_changed().connect([&]() {
-        dbgln("boo");
-        update_viewport_rect();
+    property_vadjustment().signal_changed().connect([&]() {
+        m_vertical_adj = property_vadjustment().get_value();
+        m_vertical_adj->property_value().signal_changed().connect([&]() {
+            update_viewport_rect();
+        });
     });
 
-    m_horizontal_adj->property_value().signal_changed().connect([&]() {
-        update_viewport_rect();
+    property_hadjustment().signal_changed().connect([&]() {
+        m_horizontal_adj = property_hadjustment().get_value();
+        m_horizontal_adj->property_value().signal_changed().connect([&]() {
+            update_viewport_rect();
+        });
     });
 
     signal_map().connect(sigc::mem_fun(*this, &WebContentView::show_event));
@@ -666,6 +665,7 @@ void WebContentView::notify_server_did_request_cursor_change(Badge<WebContentCli
 
 void WebContentView::notify_server_did_layout(Badge<WebContentClient>, Gfx::IntSize content_size)
 {
+    dbgln("vadj={} current=(l={}, u={}, inc={}) new=(l={}, u={}, inc={})", &m_vertical_adj, m_vertical_adj->get_lower(), m_vertical_adj->get_upper(), m_vertical_adj->get_page_increment(), 0, content_size.height() - m_viewport_rect.height(), m_viewport_rect.height());
     m_vertical_adj->set_lower(0);
     m_vertical_adj->set_upper(content_size.height() - m_viewport_rect.height());
     m_vertical_adj->set_page_increment(m_viewport_rect.height());

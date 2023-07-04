@@ -128,6 +128,7 @@ private:
 
     void draw_func(const Cairo::RefPtr<Cairo::Context>& context, int width, int height);
 
+    // TODO: This seems a bit unsafe, we should probably make these optional?
     std::shared_ptr<Gtk::Adjustment> m_vertical_adj;
     std::shared_ptr<Gtk::Adjustment> m_horizontal_adj;
     Gtk::DrawingArea m_drawing_area;
