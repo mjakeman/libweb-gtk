@@ -34,6 +34,7 @@
 #include <LibWebView/WebContentClient.h>
 #include <gdkmm/general.h>
 #include <gdkmm/pixbuf.h>
+#include <gdkmm/memorytexture.h>
 
 #define WEB_GDK_BUTTON_FORWARD 9
 #define WEB_GDK_BUTTON_BACKWARD 8
@@ -404,40 +405,28 @@ void WebContentView::snapshot_vfunc(const Glib::RefPtr<Gtk::Snapshot>& snapshot)
 {
     const auto allocation = get_allocation();
     const Gdk::Rectangle rect(0, 0, allocation.get_width(), allocation.get_height());
-    auto refStyleContext = get_style_context();
 
-    auto cr = snapshot->append_cairo(rect);
+    snapshot->append_color(Gdk::RGBA("white"), rect);
 
-    cr->save();
-
-    cr->set_source_rgb(255, 255, 255);
-    cr->paint();
-
-    cr->scale(m_inverse_pixel_scaling_ratio, m_inverse_pixel_scaling_ratio);
-//    cr->set_source_rgb(255, 0, 0);
-//    cr->rectangle(0, 0, 50, 50);
-//    cr->fill();
+    // TODO: Scaling?
+    // cr->scale(m_inverse_pixel_scaling_ratio, m_inverse_pixel_scaling_ratio);
 
     Gfx::Bitmap const* bitmap;
-//    Gfx::IntSize bitmap_size;
+    // Gfx::IntSize bitmap_size;
 
     if (m_client_state.has_usable_bitmap) {
         bitmap = m_client_state.front_bitmap.bitmap.ptr();
-//        bitmap_size = m_client_state.front_bitmap.last_painted_size;
+        // bitmap_size = m_client_state.front_bitmap.last_painted_size;
 
     } else {
         bitmap = m_backup_bitmap.ptr();
-//        bitmap_size = m_backup_bitmap_size;
+        // bitmap_size = m_backup_bitmap_size;
     }
 
     if (bitmap) {
-        auto pixbuf = Gdk::Pixbuf::create_from_data(bitmap->scanline_u8(0), Gdk::Colorspace::RGB, true, 8, bitmap->width(), bitmap->height(), 4 * bitmap->width());
-        Gdk::Cairo::set_source_pixbuf(cr, pixbuf, 0, 0);
-        cr->paint();
-
-//        auto surface = Cairo::ImageSurface::create(Cairo::Surface::Format::ARGB32, bitmap->width(), bitmap->height());
-//        cr->set_source(surface, 0, 0);
-//        cr->paint();
+        auto bytes = Glib::Bytes::create(bitmap->scanline_u8(0), bitmap->size_in_bytes());
+        auto texture = Gdk::MemoryTexture::create(bitmap->width(), bitmap->height(), Gdk::MemoryTexture::Format::B8G8R8A8, bytes, 4 * bitmap->width());
+        snapshot->append_texture(texture, { 0, 0, get_width(), get_height() });
 
 //        if (bitmap_size.width() < width()) {
 //            painter.fillRect(bitmap_size.width(), 0, width() - bitmap_size.width(), bitmap->height(), palette().base());
@@ -446,8 +435,6 @@ void WebContentView::snapshot_vfunc(const Glib::RefPtr<Gtk::Snapshot>& snapshot)
 //            painter.fillRect(0, bitmap_size.height(), width(), height() - bitmap_size.height(), palette().base());
 //        }
     }
-
-    cr->restore();
 }
 
 void WebContentView::set_viewport_rect(Gfx::IntRect rect)
