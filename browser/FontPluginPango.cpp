@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include "FontPluginQt.h"
+#include "FontPluginPango.h"
 #include <AK/DeprecatedString.h>
 #include <AK/String.h>
 #include <LibCore/StandardPaths.h>
@@ -13,6 +13,7 @@
 #include <LibGfx/Font/FontDatabase.h>
 // #include <QFont>
 // #include <QFontInfo>
+#include <pangomm.h>
 
 extern DeprecatedString s_serenity_resource_root;
 
@@ -35,19 +36,19 @@ FontPluginGTK::FontPluginGTK(bool is_layout_test_mode)
 
     update_generic_fonts();
 
-//    auto default_font_name = generic_font_name(Web::Platform::GenericFont::UiSansSerif);
-//    m_default_font = Gfx::FontDatabase::the().get(default_font_name, 12.0, 400, Gfx::FontWidth::Normal, 0);
-//    VERIFY(m_default_font);
+    auto default_font_name = generic_font_name(Web::Platform::GenericFont::UiSansSerif);
+    m_default_font = Gfx::FontDatabase::the().get(default_font_name, 12.0, 400, Gfx::FontWidth::Normal, 0);
+    VERIFY(m_default_font);
+
+    auto default_fixed_width_font_name = generic_font_name(Web::Platform::GenericFont::UiMonospace);
+    m_default_fixed_width_font = Gfx::FontDatabase::the().get(default_fixed_width_font_name, 12.0, 400, Gfx::FontWidth::Normal, 0);
+    VERIFY(m_default_fixed_width_font);
+
+//    m_default_font = Gfx::FontDatabase::the().get("Arial", 12.0, 400, Gfx::FontWidth::Normal, 0);
+//            VERIFY(m_default_font);
 //
-//    auto default_fixed_width_font_name = generic_font_name(Web::Platform::GenericFont::UiMonospace);
-//    m_default_fixed_width_font = Gfx::FontDatabase::the().get(default_fixed_width_font_name, 12.0, 400, Gfx::FontWidth::Normal, 0);
-//    VERIFY(m_default_fixed_width_font);
-
-    m_default_font = Gfx::FontDatabase::the().get("Arial", 12.0, 400, Gfx::FontWidth::Normal, 0);
-            VERIFY(m_default_font);
-
-    m_default_fixed_width_font = Gfx::FontDatabase::the().get("Andale Mono", 12.0, 400, Gfx::FontWidth::Normal, 0);
-            VERIFY(m_default_fixed_width_font);
+//    m_default_fixed_width_font = Gfx::FontDatabase::the().get("Andale Mono", 12.0, 400, Gfx::FontWidth::Normal, 0);
+//            VERIFY(m_default_fixed_width_font);
 }
 
 FontPluginGTK::~FontPluginGTK() = default;
@@ -75,28 +76,24 @@ void FontPluginGTK::update_generic_fonts()
 
     m_generic_font_names.resize(static_cast<size_t>(Web::Platform::GenericFont::__Count));
 
-    /*auto update_mapping = [&](Web::Platform::GenericFont generic_font, QFont::StyleHint qfont_style_hint, ReadonlySpan<DeprecatedString> fallbacks) {
+    auto update_mapping = [&](Web::Platform::GenericFont generic_font, ReadonlySpan<DeprecatedString> fallbacks) {
         if (m_is_layout_test_mode) {
             m_generic_font_names[static_cast<size_t>(generic_font)] = "SerenitySans";
             return;
         }
 
-        QFont qt_font;
-        qt_font.setStyleHint(qfont_style_hint);
+        Pango::FontDescription font_desc;
 
-        // NOTE: This is a workaround for setStyleHint being a no-op on X11 systems. See:
-        //       https://doc.qt.io/qt-6/qfont.html#setStyleHint
         if (generic_font == Web::Platform::GenericFont::Monospace)
-            qt_font.setFamily("monospace");
+            font_desc.set_family("monospace");
         else if (generic_font == Web::Platform::GenericFont::Fantasy)
-            qt_font.setFamily("fantasy");
+            font_desc.set_family("fantasy");
         else if (generic_font == Web::Platform::GenericFont::Cursive)
-            qt_font.setFamily("cursive");
+            font_desc.set_family("cursive");
 
-        QFontInfo qt_info(qt_font);
-        auto qt_font_family = qt_info.family();
+        auto pango_font_family = font_desc.get_family();
 
-        auto gfx_font = Gfx::FontDatabase::the().get(qt_font_family.toUtf8().data(), 16, 400, Gfx::FontWidth::Normal, 0, Gfx::Font::AllowInexactSizeMatch::Yes);
+        auto gfx_font = Gfx::FontDatabase::the().get(pango_font_family.c_str(), 16, 400, Gfx::FontWidth::Normal, 0, Gfx::Font::AllowInexactSizeMatch::Yes);
         if (!gfx_font) {
             for (auto& fallback : fallbacks) {
                 gfx_font = Gfx::FontDatabase::the().get(fallback, 16, 400, Gfx::FontWidth::Normal, 0, Gfx::Font::AllowInexactSizeMatch::Yes);
@@ -123,15 +120,15 @@ void FontPluginGTK::update_generic_fonts()
     Vector<DeprecatedString> sans_serif_fallbacks { "Arial", "Helvetica", "Verdana", "Trebuchet MS", "Gill Sans", "Noto Sans", "Avantgarde", "Optima", "Arial Narrow", "Liberation Sans", "Katica" };
     Vector<DeprecatedString> serif_fallbacks { "Times", "Times New Roman", "Didot", "Georgia", "Palatino", "Bookman", "New Century Schoolbook", "American Typewriter", "Liberation Serif", "Roman" };
 
-    update_mapping(Web::Platform::GenericFont::Cursive, QFont::StyleHint::Cursive, cursive_fallbacks);
-    update_mapping(Web::Platform::GenericFont::Fantasy, QFont::StyleHint::Fantasy, fantasy_fallbacks);
-    update_mapping(Web::Platform::GenericFont::Monospace, QFont::StyleHint::Monospace, monospace_fallbacks);
-    update_mapping(Web::Platform::GenericFont::SansSerif, QFont::StyleHint::SansSerif, sans_serif_fallbacks);
-    update_mapping(Web::Platform::GenericFont::Serif, QFont::StyleHint::Serif, serif_fallbacks);
-    update_mapping(Web::Platform::GenericFont::UiMonospace, QFont::StyleHint::Monospace, monospace_fallbacks);
-    update_mapping(Web::Platform::GenericFont::UiRounded, QFont::StyleHint::SansSerif, sans_serif_fallbacks);
-    update_mapping(Web::Platform::GenericFont::UiSansSerif, QFont::StyleHint::SansSerif, sans_serif_fallbacks);
-    update_mapping(Web::Platform::GenericFont::UiSerif, QFont::StyleHint::Serif, serif_fallbacks);*/
+    update_mapping(Web::Platform::GenericFont::Cursive, cursive_fallbacks);
+    update_mapping(Web::Platform::GenericFont::Fantasy, fantasy_fallbacks);
+    update_mapping(Web::Platform::GenericFont::Monospace, monospace_fallbacks);
+    update_mapping(Web::Platform::GenericFont::SansSerif, sans_serif_fallbacks);
+    update_mapping(Web::Platform::GenericFont::Serif, serif_fallbacks);
+    update_mapping(Web::Platform::GenericFont::UiMonospace, monospace_fallbacks);
+    update_mapping(Web::Platform::GenericFont::UiRounded, sans_serif_fallbacks);
+    update_mapping(Web::Platform::GenericFont::UiSansSerif, sans_serif_fallbacks);
+    update_mapping(Web::Platform::GenericFont::UiSerif, serif_fallbacks);
 }
 
 DeprecatedString FontPluginGTK::generic_font_name(Web::Platform::GenericFont generic_font)

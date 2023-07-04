@@ -6,7 +6,7 @@
 
 #include "../AudioCodecPluginLadybird.h"
 #include "../EventLoopImplementationGLib.h"
-#include "../FontPluginQt.h"
+#include "../FontPluginPango.h"
 #include "../ImageCodecPluginLadybird.h"
 #include "../RequestManagerSoup.h"
 #include "../Utilities.h"

@@ -8,7 +8,7 @@ set(WEBCONTENT_SOURCES
     ${WEBCONTENT_SOURCE_DIR}/WebDriverConnection.cpp
     ../AudioCodecPluginLadybird.cpp
     ../EventLoopImplementationGLib.cpp
-    ../FontPluginGTK.cpp
+        ../FontPluginPango.cpp
     ../ImageCodecPluginLadybird.cpp
     ../RequestManagerSoup.cpp
     ../Utilities.cpp
