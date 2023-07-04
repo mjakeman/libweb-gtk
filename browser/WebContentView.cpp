@@ -43,7 +43,7 @@ bool is_using_dark_system_theme(Gtk::Widget&);
 WebContentView::WebContentView(StringView webdriver_content_ipc_path, WebView::EnableCallgrindProfiling enable_callgrind_profiling, WebView::UseJavaScriptBytecode use_javascript_bytecode)
     : Glib::ObjectBase(typeid(WebContentView))
     , Gtk::Scrollable()
-    , Gtk::DrawingArea()
+    , Gtk::Widget()
     , m_webdriver_content_ipc_path(webdriver_content_ipc_path)
 {
     // set_child(m_drawing_area);
@@ -67,9 +67,6 @@ WebContentView::WebContentView(StringView webdriver_content_ipc_path, WebView::E
 
     signal_map().connect(sigc::mem_fun(*this, &WebContentView::show_event));
     signal_unmap().connect(sigc::mem_fun(*this, &WebContentView::hide_event));
-
-    set_draw_func(sigc::mem_fun(*this, &WebContentView::draw_func));
-    signal_resize().connect(sigc::mem_fun(*this, &WebContentView::resize_event));
 
     // Event Controllers
     m_motion_controller = Gtk::EventControllerMotion::create();
@@ -397,10 +394,19 @@ void WebContentView::resize_event(int, int)
     handle_resize();
 }
 
-void WebContentView::draw_func(const Cairo::RefPtr<Cairo::Context>& cr, int width, int height)
+// Runs whenever the widget resizes
+void WebContentView::size_allocate_vfunc(int width, int height, int)
 {
-    (void) width;
-    (void) height;
+    resize_event(width, height);
+}
+
+void WebContentView::snapshot_vfunc(const Glib::RefPtr<Gtk::Snapshot>& snapshot)
+{
+    const auto allocation = get_allocation();
+    const Gdk::Rectangle rect(0, 0, allocation.get_width(), allocation.get_height());
+    auto refStyleContext = get_style_context();
+
+    auto cr = snapshot->append_cairo(rect);
 
     cr->save();
 
@@ -439,8 +445,6 @@ void WebContentView::draw_func(const Cairo::RefPtr<Cairo::Context>& cr, int widt
 //        if (bitmap_size.height() < height()) {
 //            painter.fillRect(0, bitmap_size.height(), width(), height() - bitmap_size.height(), palette().base());
 //        }
-
-        return;
     }
 
     cr->restore();

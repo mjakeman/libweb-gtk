@@ -31,6 +31,7 @@
 #include <gtkmm/gestureclick.h>
 #include <gtkmm/eventcontrollermotion.h>
 #include <gtkmm/scrollable.h>
+#include <gtkmm/snapshot.h>
 
 namespace WebView {
 class WebContentClient;
@@ -41,14 +42,17 @@ using WebView::WebContentClient;
 class Tab;
 
 class WebContentView final
-    : public Gtk::Scrollable // must come BEFORE DrawingArea (so interface can be init'd)
-    , public Gtk::DrawingArea
+    : public Gtk::Scrollable // must come BEFORE Widget (so interface can be init'd)
+    , public Gtk::Widget
     , public WebView::ViewImplementation {
 public:
     explicit WebContentView(StringView webdriver_content_ipc_path, WebView::EnableCallgrindProfiling, WebView::UseJavaScriptBytecode);
     virtual ~WebContentView() override;
 
     Function<String(const AK::URL&, Web::HTML::ActivateTab)> on_tab_open_request;
+
+    virtual void snapshot_vfunc(const Glib::RefPtr<Gtk::Snapshot>& snapshot) override;
+    virtual void size_allocate_vfunc(int width, int height, int baseline) override;
 
     /*virtual void paintEvent(QPaintEvent*) override;
     virtual void resizeEvent(QResizeEvent*) override;
@@ -125,8 +129,6 @@ private:
     void on_key_released(guint keyval, guint keycode, Gdk::ModifierType state);
     void on_pressed(int n_press, double x, double y);
     void on_release(int n_press, double x, double y);
-
-    void draw_func(const Cairo::RefPtr<Cairo::Context>& context, int width, int height);
 
     // TODO: This seems a bit unsafe, we should probably make these optional?
     std::shared_ptr<Gtk::Adjustment> m_vertical_adj;
