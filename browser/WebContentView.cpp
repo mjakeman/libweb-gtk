@@ -32,6 +32,7 @@
 #include <LibWeb/Crypto/Crypto.h>
 #include <LibWeb/Loader/ContentFilter.h>
 #include <LibWebView/WebContentClient.h>
+#include <cstring>
 #include <gdkmm/general.h>
 #include <gdkmm/pixbuf.h>
 #include <gdkmm/memorytexture.h>

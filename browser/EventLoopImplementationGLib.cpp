@@ -123,10 +123,13 @@ bool EventLoopManagerGLib::unregister_timer(int timer_id)
     return thread_data.timers.remove(timer_id);
 }
 
-static void glib_notifier_activated(GIOChannel *source, GIOCondition, Core::Notifier& notifier)
+static int
+glib_notifier_activated(GIOChannel *source, GIOCondition, gpointer user_data)
 {
+    auto notifier = (Core::Notifier *)user_data;
     Core::NotifierActivationEvent event(g_io_channel_unix_get_fd (source));
-    notifier.dispatch_event(event);
+    notifier->dispatch_event(event);
+    return 1;
 }
 
 void EventLoopManagerGLib::register_notifier(Core::Notifier& notifier)
@@ -144,7 +147,7 @@ void EventLoopManagerGLib::register_notifier(Core::Notifier& notifier)
     }
 
     GIOChannel* channel = g_io_channel_unix_new(notifier.fd());
-    guint watch_id = g_io_add_watch_full(channel, G_PRIORITY_DEFAULT, condition, (GIOFunc)glib_notifier_activated, &notifier,
+    guint watch_id = g_io_add_watch_full(channel, G_PRIORITY_DEFAULT, condition, reinterpret_cast<GIOFunc>(glib_notifier_activated), &notifier,
                                          reinterpret_cast<GDestroyNotify>(g_io_channel_unref));
 
     // Store watch ID for later

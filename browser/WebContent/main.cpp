@@ -8,7 +8,7 @@
 #include "../EventLoopImplementationGLib.h"
 #include "../FontPluginQt.h"
 #include "../ImageCodecPluginLadybird.h"
-// #include "../RequestManagerSoup.h"
+#include "../RequestManagerSoup.h"
 #include "../Utilities.h"
 // #include "../WebSocketClientManagerLadybird.h"
 #include <AK/LexicalPath.h>
