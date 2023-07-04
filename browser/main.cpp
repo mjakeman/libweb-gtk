@@ -119,10 +119,13 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
         use_javascript_bytecode ? WebView::UseJavaScriptBytecode::Yes : WebView::UseJavaScriptBytecode::No
     );
 
+    Gtk::ScrolledWindow scroll_area = Gtk::ScrolledWindow();
+    scroll_area.set_child(view);
+
     Gtk::Window window = Gtk::Window();
     window.set_title("LibWeb GTK");
     window.set_default_size(800, 600);
-    window.set_child(view);
+    window.set_child(scroll_area);
     window.present();
 
     view.load(AK::DeprecatedString("https://google.com/"));

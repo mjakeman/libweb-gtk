@@ -41,9 +41,12 @@
 bool is_using_dark_system_theme(Gtk::Widget&);
 
 WebContentView::WebContentView(StringView webdriver_content_ipc_path, WebView::EnableCallgrindProfiling enable_callgrind_profiling, WebView::UseJavaScriptBytecode use_javascript_bytecode)
-    : m_webdriver_content_ipc_path(webdriver_content_ipc_path)
+    : Glib::ObjectBase(typeid(WebContentView))
+    , Gtk::Scrollable()
+    , Gtk::DrawingArea()
+    , m_webdriver_content_ipc_path(webdriver_content_ipc_path)
 {
-    set_child(m_drawing_area);
+    // set_child(m_drawing_area);
 
     m_device_pixel_ratio = (float) get_scale_factor();
     m_inverse_pixel_scaling_ratio = 1.0f / m_device_pixel_ratio;
@@ -55,6 +58,7 @@ WebContentView::WebContentView(StringView webdriver_content_ipc_path, WebView::E
     set_hadjustment(m_horizontal_adj);
 
     m_vertical_adj->property_value().signal_changed().connect([&]() {
+        dbgln("boo");
         update_viewport_rect();
     });
 
@@ -65,8 +69,8 @@ WebContentView::WebContentView(StringView webdriver_content_ipc_path, WebView::E
     signal_map().connect(sigc::mem_fun(*this, &WebContentView::show_event));
     signal_unmap().connect(sigc::mem_fun(*this, &WebContentView::hide_event));
 
-    m_drawing_area.set_draw_func(sigc::mem_fun(*this, &WebContentView::draw_func));
-    m_drawing_area.signal_resize().connect(sigc::mem_fun(*this, &WebContentView::resize_event));
+    set_draw_func(sigc::mem_fun(*this, &WebContentView::draw_func));
+    signal_resize().connect(sigc::mem_fun(*this, &WebContentView::resize_event));
 
     // Event Controllers
     m_motion_controller = Gtk::EventControllerMotion::create();
@@ -571,7 +575,6 @@ void WebContentView::create_client(WebView::EnableCallgrindProfiling enable_call
 
 void WebContentView::notify_server_did_paint(Badge<WebContentClient>, i32 bitmap_id, Gfx::IntSize size)
 {
-    queue_draw();
     if (m_client_state.back_bitmap.id == bitmap_id) {
         m_client_state.has_usable_bitmap = true;
         m_client_state.back_bitmap.pending_paints--;
@@ -579,6 +582,7 @@ void WebContentView::notify_server_did_paint(Badge<WebContentClient>, i32 bitmap
         swap(m_client_state.back_bitmap, m_client_state.front_bitmap);
         // We don't need the backup bitmap anymore, so drop it.
         m_backup_bitmap = nullptr;
+        queue_draw();
 
         if (m_client_state.got_repaint_requests_while_painting) {
             m_client_state.got_repaint_requests_while_painting = false;

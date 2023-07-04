@@ -30,6 +30,7 @@
 #include <gtkmm/gesturedrag.h>
 #include <gtkmm/gestureclick.h>
 #include <gtkmm/eventcontrollermotion.h>
+#include <gtkmm/scrollable.h>
 
 namespace WebView {
 class WebContentClient;
@@ -40,7 +41,8 @@ using WebView::WebContentClient;
 class Tab;
 
 class WebContentView final
-    : public Gtk::ScrolledWindow
+    : public Gtk::Scrollable // must come BEFORE DrawingArea (so interface can be init'd)
+    , public Gtk::DrawingArea
     , public WebView::ViewImplementation {
 public:
     explicit WebContentView(StringView webdriver_content_ipc_path, WebView::EnableCallgrindProfiling, WebView::UseJavaScriptBytecode);
