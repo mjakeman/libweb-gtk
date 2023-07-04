@@ -41,15 +41,7 @@ ErrorOr<NonnullRefPtr<RequestManagerSoup::Request>> RequestManagerSoup::create_r
     SoupMessageHeaders *soup_request_headers;
     SoupMessage *msg;
 
-    soup_request_headers = soup_message_headers_new(SOUP_MESSAGE_HEADERS_REQUEST);
-
     /* Initialize URL and headers */
-    for (auto& it : request_headers) {
-        if (!g_ascii_strcasecmp(it.key.characters(), "Accept-Encoding"))
-            continue;
-        soup_message_headers_append(soup_request_headers, it.key.characters(), it.value.characters());
-    }
-
     char *c_url = owned_cstring_from_ak_string(url.to_string().value());
 
     if (method.equals_ignoring_ascii_case("head"sv)) {
@@ -80,6 +72,14 @@ ErrorOr<NonnullRefPtr<RequestManagerSoup::Request>> RequestManagerSoup::create_r
     }
 
     g_free(c_url);
+
+    soup_request_headers = soup_message_get_request_headers(msg);
+
+    for (auto& it : request_headers) {
+        if (g_ascii_strcasecmp(it.key.characters(), "Accept-Encoding") == 0)
+            continue;
+        soup_message_headers_append(soup_request_headers, it.key.characters(), it.value.characters());
+    }
 
     /* NOTE: We explicitly disable HTTP2 as it's significantly slower (up to 5x, possibly more) */
     soup_message_set_force_http1 (msg, true);
