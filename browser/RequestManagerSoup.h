@@ -8,6 +8,7 @@
 
 #include <LibWeb/Loader/ResourceLoader.h>
 #include <glibmm/object.h>
+#include <libsoup/soup.h>
 
 class RequestManagerSoup
     : Glib::Object
@@ -25,32 +26,32 @@ public:
 
     virtual RefPtr<Web::ResourceLoaderConnectorRequest> start_request(DeprecatedString const& method, AK::URL const&, HashMap<DeprecatedString, DeprecatedString> const& request_headers, ReadonlyBytes request_body, Core::ProxyData const&) override;
 
-    sigc::signal<void(int)> signal_reply_finished;
-
 private:
     RequestManagerSoup();
 
     class Request
         : public Web::ResourceLoaderConnectorRequest {
+    friend RequestManagerSoup;
     public:
-        static ErrorOr<NonnullRefPtr<Request>> create(DeprecatedString const& method, AK::URL const& url, HashMap<DeprecatedString, DeprecatedString> const& request_headers, ReadonlyBytes request_body, Core::ProxyData const&);
-
         virtual ~Request() override;
 
         virtual void set_should_buffer_all_input(bool) override { }
         virtual bool stop() override { return false; }
         virtual void stream_into(Stream&) override { }
 
-        void did_finish();
+        void did_finish(SoupSession *session, SoupMessage *reply, GAsyncResult *result);
 
-//        QNetworkReply& reply() { return m_reply; }
+        SoupMessage *reply() { return m_reply; }
 
     private:
-        Request(int);
-//
-//        QNetworkReply& m_reply;
+        explicit Request(SoupMessage *message);
+
+        SoupMessage *m_reply;
     };
 
-//    HashMap<QNetworkReply*, NonnullRefPtr<Request>> m_pending;
-//    QNetworkAccessManager* m_qnam { nullptr };
+    ErrorOr<NonnullRefPtr<RequestManagerSoup::Request>> create_request(SoupSession *session, DeprecatedString const& method, AK::URL const& url, HashMap<DeprecatedString, DeprecatedString> const& request_headers, ReadonlyBytes request_body, Core::ProxyData const&);
+    static void reply_finished(SoupSession* session, GAsyncResult* result, gpointer);
+
+    HashMap<SoupMessage*, NonnullRefPtr<Request>> m_pending;
+    SoupSession* m_session;
 };

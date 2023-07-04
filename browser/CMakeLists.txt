@@ -79,10 +79,15 @@ set(CMAKE_AUTOUIC ON)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK4 REQUIRED gtkmm-4.0)
+pkg_check_modules(SOUP3 REQUIRED libsoup-3.0)
 
 include_directories(${GTK4_INCLUDE_DIRS})
 link_directories(${GTK4_LIBRARY_DIRS})
 add_definitions(${GTK4_CFLAGS_OTHER})
+
+include_directories(${SOUP3_INCLUDE_DIRS})
+link_directories(${SOUP3_LIBRARY_DIRS})
+add_definitions(${SOUP3_CFLAGS_OTHER})
 
 set(BROWSER_SOURCE_DIR ${SERENITY_SOURCE_DIR}/Userland/Applications/Browser/)
 

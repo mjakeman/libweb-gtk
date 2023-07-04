@@ -25,5 +25,20 @@ Find the run configuration named `run`, edit it, set `ladybird` as the executabl
 
 You are now ready to build and run `libweb-gtk`.
 
+#### macOS
+On macOS, you will also need `icu4c` in your path. Set the following environment variable
+
+```
+# Intel
+PKG_CONFIG_PATH="/usr/local/opt/icu4c/lib/pkgconfig"
+
+# M1
+PKG_CONFIG_PATH="/opt/homebrew/opt/icu4c/lib/pkgconfig"
+```
+
+You can do this in your CMake profile in CLion, or as part of your `.zshrc`.
+
+See: https://www.jetbrains.com/help/clion/cmake-profile.html#EnvVariables
+
 ## Licence
 Available under the same licence as SerenityOS (BSD 2-Clause).

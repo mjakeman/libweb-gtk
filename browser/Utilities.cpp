@@ -32,6 +32,12 @@ Glib::ustring ustring_from_ak_string(String const& ak_string)
     return {view.characters_without_null_termination(), view.length()};
 }
 
+char* owned_cstring_from_ak_string(String const& ak_string)
+{
+    auto view = ak_string.bytes_as_string_view();
+    return g_strndup(view.characters_without_null_termination(), view.length());
+}
+
 void platform_init()
 {
 #ifdef AK_OS_ANDROID
