@@ -52,5 +52,8 @@ You can do this in your CMake profile in CLion, or as part of your `.zshrc`.
 
 See: https://www.jetbrains.com/help/clion/cmake-profile.html#EnvVariables
 
+#### Debugging
+On macOS, there is no gdb. Instead, use `ninja debug-lldb`.
+
 ## Licence
 Available under the same licence as SerenityOS (BSD 2-Clause).
