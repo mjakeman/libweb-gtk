@@ -14,20 +14,30 @@ This is not production ready so use at your own risk.
 Interested in contributing? Start a discussion and let's get in touch!
 
 ## Building
-### CLion Setup
 Clone the repo and check out submodules
 ```
 git clone ...
 git submodule update --init --recursive
 ```
 
+### Command Line
+Make a new directory `Build` inside `/browser`.
+
+From inside that directory, run:
+
+```
+cmake .. -GNinja
+ninja run ladybird
+```
+
+### CLion Setup
 Navigate to `browser/CMakeLists.txt` inside CLion and load the CMake project there.
 
 Find the run configuration named `run`, edit it, set `ladybird` as the executable.
 
 You are now ready to build and run `libweb-gtk`.
 
-#### macOS
+### macOS
 On macOS, you will also need `icu4c` in your path. Set the following environment variable
 
 ```
