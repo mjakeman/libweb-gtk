@@ -117,9 +117,9 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
 //    window.show();
 
     WebContentView view(
-        webdriver_content_ipc_path,
-        enable_callgrind_profiling ? WebView::EnableCallgrindProfiling::Yes : WebView::EnableCallgrindProfiling::No,
-        use_javascript_bytecode ? WebView::UseJavaScriptBytecode::Yes : WebView::UseJavaScriptBytecode::No
+            webdriver_content_ipc_path,
+            enable_callgrind_profiling ? WebView::EnableCallgrindProfiling::Yes : WebView::EnableCallgrindProfiling::No,
+            use_javascript_bytecode ? WebView::UseJavaScriptBytecode::Yes : WebView::UseJavaScriptBytecode::No
     );
 
     Gtk::Entry navigation = Gtk::Entry();
@@ -166,10 +166,4 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     }
 
     return event_loop.exec();
-}
-
-bool is_using_dark_system_theme(Gtk::Widget&)
-{
-    // TODO: Allow querying libadwaita if present
-    return false;
 }

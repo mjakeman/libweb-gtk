@@ -532,6 +532,12 @@ static Core::AnonymousBuffer make_system_theme_from_gtk_palette(Gtk::Widget& wid
     return theme;
 }
 
+bool is_using_dark_system_theme(Gtk::Widget&)
+{
+// TODO: Allow querying libadwaita if present
+    return false;
+}
+
 void WebContentView::update_palette(PaletteMode mode)
 {
     client().async_update_system_theme(make_system_theme_from_gtk_palette(*this, mode));

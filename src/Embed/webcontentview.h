@@ -1,0 +1,8 @@
+//
+// Created by Matthew Jakeman on 6/07/23.
+//
+
+#ifndef LADYBIRD_WEBCONTENTVIEW_H
+#define LADYBIRD_WEBCONTENTVIEW_H
+
+#endif //LADYBIRD_WEBCONTENTVIEW_H

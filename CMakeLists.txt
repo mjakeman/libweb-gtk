@@ -69,10 +69,6 @@ add_compile_options(-Wno-user-defined-literals)
 # Needed by Gtkmm
 add_compile_options(-fexceptions)
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
-
 set(BROWSER_SOURCE_DIR ${SERENITY_SOURCE_DIR}/Userland/Applications/Browser/)
 
 find_package(PkgConfig REQUIRED)
@@ -88,6 +84,7 @@ link_directories(${SOUP3_LIBRARY_DIRS})
 add_definitions(${SOUP3_CFLAGS_OTHER})
 
 add_subdirectory(src)
+add_subdirectory(demo)
 
 if(NOT CMAKE_SKIP_INSTALL_RULES)
     include(cmake/InstallRules.cmake)
