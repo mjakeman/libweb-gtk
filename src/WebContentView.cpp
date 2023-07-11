@@ -468,6 +468,7 @@ void WebContentView::update_viewport_rect()
 {
     auto scaled_width = int((float)get_width() / m_inverse_pixel_scaling_ratio);
     auto scaled_height = int((float)get_height() / m_inverse_pixel_scaling_ratio);
+    // TODO: WE SHOULD NOT CRASH IF NO ADJUSTMENTS ARE PRESENT !!
     Gfx::IntRect rect(max(0, m_horizontal_adj->get_value()), max(0, m_vertical_adj->get_value()), scaled_width, scaled_height);
 
     set_viewport_rect(rect);
