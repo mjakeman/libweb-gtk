@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-#include "EventLoopImplementationGLib.h"
+#include "EventLoopImplementationGtk.h"
 #include <AK/IDAllocator.h>
 #include <LibCore/Event.h>
 #include <LibCore/Notifier.h>
@@ -34,49 +34,55 @@ struct ThreadData {
     HashMap<int, Glib::RefPtr<Glib::IOChannel>> fd_channels;
 };
 
-EventLoopImplementationGLib::EventLoopImplementationGLib()
+EventLoopImplementationGtk::EventLoopImplementationGtk()
 {
-    dbgln("{} Create", getpid());
-    m_event_loop = g_main_loop_new(nullptr, FALSE);
+    dbgln("INTEGRATION {} Create", getpid());
+//    m_event_loop = g_main_loop_new(nullptr, FALSE);
 }
 
-EventLoopImplementationGLib::~EventLoopImplementationGLib()
+EventLoopImplementationGtk::~EventLoopImplementationGtk()
 {
-    dbgln("{} Delete", getpid());
-    g_main_loop_unref(m_event_loop);
+    dbgln("INTEGRATION {} Delete", getpid());
+//    g_main_loop_unref(m_event_loop);
 }
 
-int EventLoopImplementationGLib::exec()
+int EventLoopImplementationGtk::exec()
 {
-    dbgln("{} Exec", getpid());
-    g_main_loop_run(m_event_loop);
+    dbgln("INTEGRATION {} Exec", getpid());
+//    g_main_loop_run(m_event_loop);
+    GMainContext *context = g_main_context_default();
+    while (true)
+        g_main_context_iteration(context, TRUE);
+    dbgln("Context Grabbed: {}", context);
     return m_error_code;
 }
 
-size_t EventLoopImplementationGLib::pump(PumpMode mode)
+size_t EventLoopImplementationGtk::pump(PumpMode mode)
 {
-    dbgln("{} Pump", getpid());
+    VERIFY_NOT_REACHED();
+    dbgln("INTEGRATION {} Pump", getpid());
     auto result = Core::ThreadEventQueue::current().process();
     if (mode == PumpMode::WaitForEvents) {
-        g_main_context_iteration(g_main_loop_get_context(m_event_loop), TRUE);
+//        g_main_context_iteration(g_main_loop_get_context(m_event_loop), TRUE);
     } else {
     }
     result += Core::ThreadEventQueue::current().process();
     return result;
 }
 
-void EventLoopImplementationGLib::quit(int code)
+void EventLoopImplementationGtk::quit(int code)
 {
-    dbgln("{} Quit", getpid());
+    VERIFY_NOT_REACHED();
+    dbgln("INTEGRATION {} Quit", getpid());
     m_error_code = code;
-    g_main_loop_quit(m_event_loop);
+//    g_main_loop_quit(m_event_loop);
 }
 
-void EventLoopImplementationGLib::wake() {}
+void EventLoopImplementationGtk::wake() {}
 
-void EventLoopImplementationGLib::post_event(Core::Object& receiver, NonnullOwnPtr<Core::Event>&& event)
+void EventLoopImplementationGtk::post_event(Core::Object& receiver, NonnullOwnPtr<Core::Event>&& event)
 {
-    dbgln("{} Post event", getpid());
+    dbgln("INTEGRATION {} Post event", getpid());
     // Can we have multithreaded event queues?
     m_thread_event_queue.post_event(receiver, move(event));
     if (&m_thread_event_queue != &Core::ThreadEventQueue::current())
@@ -85,7 +91,7 @@ void EventLoopImplementationGLib::post_event(Core::Object& receiver, NonnullOwnP
 
 static void glib_timer_fired(int timer_id, Core::TimerShouldFireWhenNotVisible should_fire_when_not_visible, Core::Object& object)
 {
-    dbgln("{} Timer fired", getpid());
+    dbgln("INTEGRATION {} Timer fired", getpid());
     if (should_fire_when_not_visible == Core::TimerShouldFireWhenNotVisible::No) {
         if (!object.is_visible_for_timer_purposes())
             return;
@@ -94,9 +100,9 @@ static void glib_timer_fired(int timer_id, Core::TimerShouldFireWhenNotVisible s
     object.dispatch_event(event);
 }
 
-int EventLoopManagerGLib::register_timer(Core::Object& object, int milliseconds, bool should_reload, Core::TimerShouldFireWhenNotVisible should_fire_when_not_visible)
+int EventLoopManagerGtk::register_timer(Core::Object& object, int milliseconds, bool should_reload, Core::TimerShouldFireWhenNotVisible should_fire_when_not_visible)
 {
-    dbgln("{} Register timer", getpid());
+    dbgln("INTEGRATION {} Register timer", getpid());
     auto& thread_data = ThreadData::the();
 
     auto timer_id = thread_data.timer_id_allocator.allocate();
@@ -118,9 +124,9 @@ int EventLoopManagerGLib::register_timer(Core::Object& object, int milliseconds,
     return timer_id;
 }
 
-bool EventLoopManagerGLib::unregister_timer(int timer_id)
+bool EventLoopManagerGtk::unregister_timer(int timer_id)
 {
-    dbgln("{} Unregister timer", getpid());
+    dbgln("INTEGRATION {} Unregister timer", getpid());
     auto& thread_data = ThreadData::the();
     thread_data.timer_id_allocator.deallocate(timer_id);
 
@@ -134,9 +140,9 @@ bool EventLoopManagerGLib::unregister_timer(int timer_id)
     return thread_data.timers.remove(timer_id);
 }
 
-void EventLoopManagerGLib::register_notifier(Core::Notifier& notifier)
+void EventLoopManagerGtk::register_notifier(Core::Notifier& notifier)
 {
-    dbgln("{} Register notifier", getpid());
+    dbgln("INTEGRATION {} Register notifier", getpid());
     Glib::IOCondition condition;
     switch (notifier.type()) {
     case Core::Notifier::Type::Read:
@@ -183,9 +189,9 @@ void EventLoopManagerGLib::register_notifier(Core::Notifier& notifier)
     ThreadData::the().notifiers.set(&notifier, move(io_watch));
 }
 
-void EventLoopManagerGLib::unregister_notifier(Core::Notifier& notifier)
+void EventLoopManagerGtk::unregister_notifier(Core::Notifier& notifier)
 {
-    dbgln("{} Unregister notifier", getpid());
+    dbgln("INTEGRATION {} Unregister notifier", getpid());
     auto thread_data = ThreadData::the();
 
     auto watch = thread_data.notifiers.get(&notifier);
@@ -201,26 +207,26 @@ void EventLoopManagerGLib::unregister_notifier(Core::Notifier& notifier)
     ThreadData::the().notifiers.remove(&notifier);
 }
 
-void cb_process_events() {
+void cb_process_events2() {
     Core::ThreadEventQueue::current().process();
 }
 
-void EventLoopManagerGLib::did_post_event()
+void EventLoopManagerGtk::did_post_event()
 {
-    dbgln("{} Posted event", getpid());
-    g_timeout_add_once(0, reinterpret_cast<GSourceOnceFunc>(cb_process_events), nullptr);
+    dbgln("INTEGRATION {} Posted event", getpid());
+    g_timeout_add_once(0, reinterpret_cast<GSourceOnceFunc>(cb_process_events2), nullptr);
 }
 
-EventLoopManagerGLib::EventLoopManagerGLib()
+EventLoopManagerGtk::EventLoopManagerGtk()
 {
-    g_timeout_add_once(0, reinterpret_cast<GSourceOnceFunc>(cb_process_events), nullptr);
+    g_timeout_add_once(0, reinterpret_cast<GSourceOnceFunc>(cb_process_events2), nullptr);
 }
 
-EventLoopManagerGLib::~EventLoopManagerGLib() = default;
+EventLoopManagerGtk::~EventLoopManagerGtk() = default;
 
-NonnullOwnPtr<Core::EventLoopImplementation> EventLoopManagerGLib::make_implementation()
+NonnullOwnPtr<Core::EventLoopImplementation> EventLoopManagerGtk::make_implementation()
 {
-    return adopt_own(*new EventLoopImplementationGLib);
+    return adopt_own(*new EventLoopImplementationGtk);
 }
 
 }

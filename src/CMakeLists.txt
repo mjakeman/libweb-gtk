@@ -5,6 +5,7 @@ set(SOURCES
         #    BrowserWindow.cpp
         #    ConsoleWidget.cpp
         EventLoopImplementationGLib.cpp
+        EventLoopImplementationGtk.cpp
         HelperProcess.cpp
         #    InspectorWidget.cpp
         #    LocationEdit.cpp
@@ -14,6 +15,9 @@ set(SOURCES
         #    Tab.cpp
         Utilities.cpp
         WebContentView.cpp
+
+        Embed/webcontentview.cpp
+        Embed/webembed.cpp
 )
 
 add_library(webembed ${SOURCES})
@@ -30,7 +34,7 @@ endforeach()
 
 target_include_directories(webembed PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-        $<INSTALL_INTERFACE:include/webembed>
+        $<INSTALL_INTERFACE:include/>
 )
 
 add_subdirectory(SQLServer)

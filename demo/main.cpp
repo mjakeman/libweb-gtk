@@ -4,123 +4,73 @@
  * SPDX-License-Identifier: BSD-2-Clause
  */
 
-// #include "BrowserWindow.h"
-#include "EventLoopImplementationGLib.h"
-#include "HelperProcess.h"
-// #include "Settings.h"
 #include "Utilities.h"
-// #include "WebContentView.h"
 #include <AK/DeprecatedString.h>
-#include <AK/Function.h>
-#include <AK/HashMap.h>
-#include <AK/OwnPtr.h>
-#include <AK/URL.h>
-#include <Browser/CookieJar.h>
-#include <Browser/Database.h>
-#include <LibCore/ArgsParser.h>
-#include <LibCore/EventLoop.h>
-#include <LibCore/System.h>
-#include <LibFileSystem/FileSystem.h>
-#include <LibGfx/Font/FontDatabase.h>
-#include <LibMain/Main.h>
-#include <LibSQL/SQLClient.h>
 #include <gtkmm/application.h>
 #include <gtkmm/window.h>
 #include <gtkmm/box.h>
 #include <gtkmm/entry.h>
 #include <gtkmm/button.h>
+#include <gtkmm/applicationwindow.h>
 
 #include "WebContentView.h"
+#include "Embed/webembed.h"
+#include "LibCore/EventLoopImplementation.h"
+#include "EventLoopImplementationGLib.h"
+#include "EventLoopImplementationGtk.h"
+#include "LibGfx/Font/FontDatabase.h"
 
-//AK::OwnPtr<Browser::Settings> s_settings;
-
-static ErrorOr<void> handle_attached_debugger()
+class MyWindow : public Gtk::ApplicationWindow
 {
-#ifdef AK_OS_LINUX
-    // Let's ignore SIGINT if we're being debugged because GDB
-    // incorrectly forwards the signal to us even when it's set to
-    // "nopass". See https://sourceware.org/bugzilla/show_bug.cgi?id=9425
-    // for details.
-    auto unbuffered_status_file = TRY(Core::File::open("/proc/self/status"sv, Core::File::OpenMode::Read));
-    auto status_file = TRY(Core::InputBufferedFile::create(move(unbuffered_status_file)));
-    auto buffer = TRY(ByteBuffer::create_uninitialized(4096));
-    while (TRY(status_file->can_read_line())) {
-        auto line = TRY(status_file->read_line(buffer));
-        auto const parts = line.split_view(':');
-        if (parts.size() < 2 || parts[0] != "TracerPid"sv)
-            continue;
-        auto tracer_pid = parts[1].to_uint<u32>();
-        if (tracer_pid != 0UL) {
-            dbgln("Debugger is attached, ignoring SIGINT");
-            TRY(Core::System::signal(SIGINT, SIG_IGN));
-        }
-        break;
+public:
+    MyWindow()
+    {
+        WebContentView view(String(), WebView::EnableCallgrindProfiling::No, WebView::UseJavaScriptBytecode::Yes);
+
+        Gtk::Entry navigation = Gtk::Entry();
+        navigation.set_hexpand(true);
+
+        Gtk::Button button = Gtk::Button("Go!");
+        button.signal_clicked().connect([&]() {
+            auto url = navigation.get_buffer().get()->get_text();
+            view.load(ak_deprecated_string_from_ustring(url).value());
+        });
+
+        view.on_load_start = [&](URL url, bool) {
+            navigation.get_buffer()->set_text(ustring_from_ak_string(url.to_string().value()));
+        };
+
+        Gtk::Box controls = Gtk::Box(Gtk::Orientation::HORIZONTAL);
+        controls.add_css_class("toolbar");
+        controls.append(navigation);
+        controls.append(button);
+
+        Gtk::ScrolledWindow scroll_area = Gtk::ScrolledWindow();
+        scroll_area.set_child(view);
+        scroll_area.set_vexpand(true);
+
+        Gtk::Box box = Gtk::Box(Gtk::Orientation::VERTICAL);
+        box.append(controls);
+        box.append(scroll_area);
+
+//        Gtk::ApplicationWindow window = Gtk::ApplicationWindow(Glib::wrap(app));
+//        window.set_title("LibWeb GTK");
+//        window.set_default_size(800, 600);
+//        window.set_child(box);
+//        window.present();
+        set_child(box);
+
+        view.load(AK::DeprecatedString("https://mattjakeman.com/"));
+
+//        event_loop_ptr->attach();
     }
-#endif
-    return {};
-}
+};
 
-ErrorOr<int> serenity_main(Main::Arguments arguments)
-{
-    // Init Gtkmm
-    Gtk::Application::create("com.mattjakeman.LibWebGTK");
 
-    Core::EventLoopManager::install(*new Ladybird::EventLoopManagerGLib);
-    Core::EventLoop event_loop; // Create main loop
+static void on_activate (GtkApplication *app) {
+    GtkWidget *window = gtk_application_window_new(app);
 
-    TRY(handle_attached_debugger());
-
-    platform_init();
-
-    // NOTE: We only instantiate this to ensure that Gfx::FontDatabase has its default queries initialized.
-    Gfx::FontDatabase::set_default_font_query("Katica 10 400 0");
-    Gfx::FontDatabase::set_fixed_width_font_query("Csilla 10 400 0");
-
-    StringView raw_url;
-    StringView webdriver_content_ipc_path;
-    bool enable_callgrind_profiling = false;
-    bool enable_sql_database = false;
-    bool use_javascript_bytecode = false;
-
-    Core::ArgsParser args_parser;
-    args_parser.set_general_help("The browser web browser :^)");
-    args_parser.add_positional_argument(raw_url, "URL to open", "url", Core::ArgsParser::Required::No);
-    args_parser.add_option(webdriver_content_ipc_path, "Path to WebDriver IPC for WebContent", "webdriver-content-path", 0, "path");
-    args_parser.add_option(enable_callgrind_profiling, "Enable Callgrind profiling", "enable-callgrind-profiling", 'P');
-    args_parser.add_option(enable_sql_database, "Enable SQL database", "enable-sql-database", 0);
-    args_parser.add_option(use_javascript_bytecode, "Enable JavaScript bytecode VM", "use-bytecode", 0);
-    args_parser.parse(arguments);
-
-    auto get_formatted_url = [&](StringView const& raw_url) -> ErrorOr<URL> {
-        URL url = raw_url;
-        if (FileSystem::exists(raw_url))
-            url = URL::create_with_file_scheme(TRY(FileSystem::real_path(raw_url)).to_deprecated_string());
-        else if (!url.is_valid())
-            url = DeprecatedString::formatted("https://{}", raw_url);
-        return url;
-    };
-
-    RefPtr<Browser::Database> database;
-
-    if (enable_sql_database) {
-        auto sql_server_paths = TRY(get_paths_for_helper_process("SQLServer"sv));
-        auto sql_client = TRY(SQL::SQLClient::launch_server_and_create_client(move(sql_server_paths)));
-        database = TRY(Browser::Database::create(move(sql_client)));
-    }
-
-    auto cookie_jar = database ? TRY(Browser::CookieJar::create(*database)) : Browser::CookieJar::create();
-
-    // s_settings = adopt_own_if_nonnull(new Browser::Settings());
-//    BrowserWindow window(cookie_jar, webdriver_content_ipc_path, enable_callgrind_profiling ? WebView::EnableCallgrindProfiling::Yes : WebView::EnableCallgrindProfiling::No, use_javascript_bytecode ? WebView::UseJavaScriptBytecode::Yes : WebView::UseJavaScriptBytecode::No);
-//    window.setWindowTitle("browser");
-//    window.resize(800, 600);
-//    window.show();
-
-    WebContentView view(
-            webdriver_content_ipc_path,
-            enable_callgrind_profiling ? WebView::EnableCallgrindProfiling::Yes : WebView::EnableCallgrindProfiling::No,
-            use_javascript_bytecode ? WebView::UseJavaScriptBytecode::Yes : WebView::UseJavaScriptBytecode::No
-    );
+    WebContentView view(String(), WebView::EnableCallgrindProfiling::No, WebView::UseJavaScriptBytecode::Yes);
 
     Gtk::Entry navigation = Gtk::Entry();
     navigation.set_hexpand(true);
@@ -148,22 +98,28 @@ ErrorOr<int> serenity_main(Main::Arguments arguments)
     box.append(controls);
     box.append(scroll_area);
 
-    Gtk::Window window = Gtk::Window();
-    window.set_title("LibWeb GTK");
-    window.set_default_size(800, 600);
-    window.set_child(box);
-    window.signal_destroy().connect([&]{
-        event_loop.quit(0);
-    });
-    window.present();
+    gtk_window_set_child(GTK_WINDOW (window), GTK_WIDGET (box.gobj()));
+    gtk_window_present(GTK_WINDOW(window));
 
     view.load(AK::DeprecatedString("https://mattjakeman.com/"));
 
-    if (auto url = TRY(get_formatted_url(raw_url)); url.is_valid()) {
-        //window.view().load(url);
-    } else {
-        //window.view().load("about:blank"sv);
-    }
+    // this works, but... why?
+    GMainContext *context = g_main_context_default();
+    while (true)
+        g_main_context_iteration(context, TRUE);
 
-    return event_loop.exec();
+    VERIFY_NOT_REACHED();
+}
+
+int main(int argc, char **argv)
+{
+    Gtk::Application::create("org.gtkmm.examples.base");
+    GtkApplication *app = gtk_application_new("com.mattjakeman.LibWebGTK", G_APPLICATION_DEFAULT_FLAGS);
+
+    gtk_init();
+    webembed_init();
+
+    g_signal_connect(app, "activate", G_CALLBACK (on_activate), NULL);
+
+    return g_application_run(G_APPLICATION(app), argc, argv);
 }
