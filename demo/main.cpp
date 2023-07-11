@@ -15,57 +15,6 @@
 
 #include "WebContentView.h"
 #include "Embed/webembed.h"
-#include "LibCore/EventLoopImplementation.h"
-#include "EventLoopImplementationGLib.h"
-#include "EventLoopImplementationGtk.h"
-#include "LibGfx/Font/FontDatabase.h"
-
-class MyWindow : public Gtk::ApplicationWindow
-{
-public:
-    MyWindow()
-    {
-        WebContentView view(String(), WebView::EnableCallgrindProfiling::No, WebView::UseJavaScriptBytecode::Yes);
-
-        Gtk::Entry navigation = Gtk::Entry();
-        navigation.set_hexpand(true);
-
-        Gtk::Button button = Gtk::Button("Go!");
-        button.signal_clicked().connect([&]() {
-            auto url = navigation.get_buffer().get()->get_text();
-            view.load(ak_deprecated_string_from_ustring(url).value());
-        });
-
-        view.on_load_start = [&](URL url, bool) {
-            navigation.get_buffer()->set_text(ustring_from_ak_string(url.to_string().value()));
-        };
-
-        Gtk::Box controls = Gtk::Box(Gtk::Orientation::HORIZONTAL);
-        controls.add_css_class("toolbar");
-        controls.append(navigation);
-        controls.append(button);
-
-        Gtk::ScrolledWindow scroll_area = Gtk::ScrolledWindow();
-        scroll_area.set_child(view);
-        scroll_area.set_vexpand(true);
-
-        Gtk::Box box = Gtk::Box(Gtk::Orientation::VERTICAL);
-        box.append(controls);
-        box.append(scroll_area);
-
-//        Gtk::ApplicationWindow window = Gtk::ApplicationWindow(Glib::wrap(app));
-//        window.set_title("LibWeb GTK");
-//        window.set_default_size(800, 600);
-//        window.set_child(box);
-//        window.present();
-        set_child(box);
-
-        view.load(AK::DeprecatedString("https://mattjakeman.com/"));
-
-//        event_loop_ptr->attach();
-    }
-};
-
 
 static void on_activate (GtkApplication *app) {
     GtkWidget *window = gtk_application_window_new(app);
