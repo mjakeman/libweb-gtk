@@ -20,7 +20,7 @@ jobs:
       image: fedora:38
     steps:  
     - name: Install dependencies
-      run: sudo dnf -y install git gi-docgen glibmm2.68-devel gtkmm4.0-devel
+      run: sudo dnf -y install git cmake ninja gi-docgen glibmm2.68-devel gtkmm4.0-devel
       
     - uses: actions/checkout@v3
       with:
@@ -29,7 +29,7 @@ jobs:
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DDOCUMENTATION=ON -DINTROSPECTION=ON
+      run: cmake -B ${{github.workspace}}/build -GNinja -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DDOCUMENTATION=ON -DINTROSPECTION=ON
 
     - name: Build
       # Build your program with the given configuration
