@@ -21,19 +21,19 @@ git submodule update --init --recursive
 ```
 
 ### Command Line
-Make a new directory `Build` inside `/browser`.
+Make a new directory `Build` in the repository root.
 
 From inside that directory, run:
 
 ```
 cmake .. -GNinja
-ninja run ladybird
+ninja run demo-browser
 ```
 
 ### CLion Setup
-Navigate to `browser/CMakeLists.txt` inside CLion and load the CMake project there.
+Open the project in CLion and load the CMake file in the repository root.
 
-Find the run configuration named `run`, edit it, set `ladybird` as the executable.
+Find the run configuration named `run`, edit it, set `demo-browser` as the executable.
 
 You are now ready to build and run `libweb-gtk`.
 
