@@ -20,7 +20,7 @@ jobs:
       image: fedora:38
     steps:  
     - name: Install dependencies
-      run: sudo dnf -y install git cmake gcc gcc-c++ gi-docgen glibmm2.68-devel gtkmm4.0-devel
+      run: sudo dnf -y install git cmake gcc gcc-c++ gi-docgen glibmm2.68-devel gtkmm4.0-devel libsoup3-devel
       
     - uses: actions/checkout@v3
       with:
