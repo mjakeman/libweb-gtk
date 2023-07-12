@@ -39,9 +39,17 @@ static ErrorOr<void> handle_attached_debugger()
     return {};
 }
 
+#include "AK/Error.h"
+#include <LibCore/EventLoop.h>
+#include <memory>
+#include <gtkmm/init.h>
+
+std::unique_ptr<Core::EventLoop> event_loop_ptr;
+
 void webembed_init()
 {
     gtk_init();
+    Gtk::init_gtkmm_internals();
 
     // Setup utility methods for GLib event loop integration
     //  -> Note that EventLoopManagerGLib operates on the default event loop, so it can reuse

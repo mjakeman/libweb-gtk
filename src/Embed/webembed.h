@@ -6,10 +6,12 @@
 
 #pragma once
 
-#include "AK/Error.h"
-#include <LibCore/EventLoop.h>
-#include <memory>
-
-std::unique_ptr<Core::EventLoop> event_loop_ptr;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void webembed_init();
+
+#ifdef __cplusplus
+}
+#endif

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16...3.22)
 
 project(ladybird
         VERSION 0.0.1
-        LANGUAGES CXX
+        LANGUAGES C CXX
         DESCRIPTION "An embedding API for LibWeb and LibJS"
 )
 

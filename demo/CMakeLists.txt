@@ -1,5 +1,5 @@
 set(SOURCES
-        main.cpp
+    main.c
 )
 
 add_executable(demo-browser ${SOURCES})
