@@ -106,8 +106,7 @@ public:
     virtual void notify_server_did_request_file(Badge<WebContentClient>, DeprecatedString const& path, i32) override;
     virtual void notify_server_did_finish_handling_input_event(bool event_was_accepted) override;
 
-//signals:
-//    void urls_dropped(QList<QUrl> const&);
+    void update_viewport_rect();
 
 private:
     // ^WebView::ViewImplementation
@@ -133,8 +132,6 @@ private:
 
     GtkAdjustment * get_horizontal_adj() const;
     GtkAdjustment * get_vertical_adj() const;
-
-    void update_viewport_rect();
 
     float m_inverse_pixel_scaling_ratio { 1.0 };
     bool m_should_show_line_box_borders { false };

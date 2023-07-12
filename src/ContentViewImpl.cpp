@@ -9,22 +9,13 @@
 #include "ContentViewImpl.h"
 #include "HelperProcess.h"
 #include "Utilities.h"
-#include <AK/Assertions.h>
-#include <AK/ByteBuffer.h>
 #include <AK/Format.h>
-#include <AK/HashTable.h>
 #include <AK/LexicalPath.h>
-#include <AK/NonnullOwnPtr.h>
-#include <AK/StringBuilder.h>
 #include <AK/Types.h>
 #include <Kernel/API/KeyCode.h>
-#include <LibCore/ArgsParser.h>
 #include <LibCore/EventLoop.h>
-#include <LibCore/System.h>
-#include <LibCore/Timer.h>
 #include <LibGfx/Bitmap.h>
 #include <LibGfx/Font/FontDatabase.h>
-#include <LibGfx/ImageFormats/PNGWriter.h>
 #include <LibGfx/Painter.h>
 #include <LibGfx/Palette.h>
 #include <LibGfx/Rect.h>
@@ -500,7 +491,7 @@ void ContentViewImpl::update_viewport_rect()
 
     auto h_adj = get_horizontal_adj();
     int h_adj_value = h_adj != nullptr ? (int) gtk_adjustment_get_value(h_adj) : 0;
-    auto v_adj = get_horizontal_adj();
+    auto v_adj = get_vertical_adj();
     int v_adj_value = v_adj != nullptr ? (int) gtk_adjustment_get_value(v_adj) : 0;
 
     Gfx::IntRect rect(max(0, h_adj_value), max(0, v_adj_value), scaled_width, scaled_height);
@@ -720,18 +711,18 @@ void ContentViewImpl::notify_server_did_request_cursor_change(Badge<WebContentCl
 void ContentViewImpl::notify_server_did_layout(Badge<WebContentClient>, Gfx::IntSize content_size)
 {
     auto h_adj = get_horizontal_adj();
-    auto v_adj = get_horizontal_adj();
+    auto v_adj = get_vertical_adj();
 
     if (h_adj) {
         gtk_adjustment_set_lower(h_adj, 0);
         gtk_adjustment_set_upper(h_adj, content_size.width());
-        gtk_adjustment_set_lower(h_adj, m_viewport_rect.width());
+        gtk_adjustment_set_page_size(h_adj, m_viewport_rect.width());
     }
 
     if (v_adj) {
         gtk_adjustment_set_lower(v_adj, 0);
         gtk_adjustment_set_upper(v_adj, content_size.height());
-        gtk_adjustment_set_lower(v_adj, m_viewport_rect.height());
+        gtk_adjustment_set_page_size(v_adj, m_viewport_rect.height());
     }
 }
 

@@ -22,6 +22,10 @@ struct _WebContentView
     GtkScrollablePolicy hscroll_policy;
     GtkScrollablePolicy vscroll_policy;
 
+    // Signals
+    guint h_adj_signal;
+    guint v_adj_signal;
+
     // Message Backlog
     std::optional<std::string> backlog_url;
 };
@@ -64,6 +68,16 @@ web_content_view_dispose (GObject *object)
 }
 
 static void
+cb_adjustment_changed(WebContentView *self)
+{
+    if (self->view_impl.has_value()) {
+        g_object_freeze_notify(G_OBJECT (self));
+        self->view_impl->update_viewport_rect();
+        g_object_thaw_notify(G_OBJECT (self));
+    }
+}
+
+static void
 web_content_view_get_property (GObject     *object,
                                 guint       prop_id,
                                 GValue     *value,
@@ -101,10 +115,38 @@ web_content_view_set_property (GObject       *object,
     switch (prop_id)
     {
         case PROP_HADJUSTMENT:
+            // Clear
+            if (self->hadjustment) {
+                g_signal_handler_disconnect(self->hadjustment, self->h_adj_signal);
+                g_clear_object(&self->hadjustment);
+            }
+
+            // Set New
             self->hadjustment = GTK_ADJUSTMENT(g_value_get_object(value));
+
+            // Connect
+            if (self->hadjustment) {
+                g_object_ref(self->hadjustment);
+                self->h_adj_signal = g_signal_connect_swapped(self->hadjustment, "value-changed", G_CALLBACK(cb_adjustment_changed), self);
+            }
             break;
         case PROP_VADJUSTMENT:
+            // Clear
+            if (self->vadjustment) {
+                g_signal_handler_disconnect(self->vadjustment, self->v_adj_signal);
+                g_clear_object(&self->vadjustment);
+                gtk_widget_queue_resize(GTK_WIDGET (self));
+            }
+
+            // Set New
             self->vadjustment = GTK_ADJUSTMENT(g_value_get_object(value));
+
+            // Connect
+            if (self->vadjustment) {
+                g_object_ref(self->vadjustment);
+                self->v_adj_signal = g_signal_connect_swapped(self->vadjustment, "value-changed", G_CALLBACK(cb_adjustment_changed), self);
+                gtk_widget_queue_resize(GTK_WIDGET (self));
+            }
             break;
         case PROP_HSCROLL_POLICY:
             self->hscroll_policy = static_cast<GtkScrollablePolicy>(g_value_get_enum(value));
@@ -180,6 +222,8 @@ cb_main_loop (WebContentView *self)
         web_content_view_load(WEB_CONTENT_VIEW(self), self->backlog_url->c_str());
         self->backlog_url.reset();
     }
+
+    gtk_widget_queue_resize(GTK_WIDGET (self));
 }
 
 static void
