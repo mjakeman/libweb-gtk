@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2022-2023, Andreas Kling <kling@serenityos.org>
  * Copyright (c) 2023, Linus Groh <linusg@serenityos.org>
+ * Copyright (c) 2023, Matthew Jakeman <mattjakemandev@gmail.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -467,6 +468,7 @@ void WebContentView::update_viewport_rect()
 {
     auto scaled_width = int((float)get_width() / m_inverse_pixel_scaling_ratio);
     auto scaled_height = int((float)get_height() / m_inverse_pixel_scaling_ratio);
+    // TODO: WE SHOULD NOT CRASH IF NO ADJUSTMENTS ARE PRESENT !!
     Gfx::IntRect rect(max(0, m_horizontal_adj->get_value()), max(0, m_vertical_adj->get_value()), scaled_width, scaled_height);
 
     set_viewport_rect(rect);
@@ -530,6 +532,12 @@ static Core::AnonymousBuffer make_system_theme_from_gtk_palette(Gtk::Widget& wid
     palette.set_flag(Gfx::FlagRole::IsDark, is_using_dark_system_theme(widget));
 
     return theme;
+}
+
+bool is_using_dark_system_theme(Gtk::Widget&)
+{
+// TODO: Allow querying libadwaita if present
+    return false;
 }
 
 void WebContentView::update_palette(PaletteMode mode)

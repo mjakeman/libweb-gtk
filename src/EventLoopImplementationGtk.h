@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2022-2023, Andreas Kling <kling@serenityos.org>
+ * Copyright (c) 2023, Matthew Jakeman <mattjakemandev@gmail.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
@@ -14,10 +15,10 @@
 
 namespace Ladybird {
 
-class EventLoopManagerGLib final : public Core::EventLoopManager {
+class EventLoopManagerGtk final : public Core::EventLoopManager {
 public:
-    EventLoopManagerGLib();
-    virtual ~EventLoopManagerGLib() override;
+    EventLoopManagerGtk();
+    virtual ~EventLoopManagerGtk() override;
     virtual NonnullOwnPtr<Core::EventLoopImplementation> make_implementation() override;
 
     virtual int register_timer(Core::Object&, int milliseconds, bool should_reload, Core::TimerShouldFireWhenNotVisible) override;
@@ -35,11 +36,11 @@ public:
 private:
 };
 
-class EventLoopImplementationGLib final : public Core::EventLoopImplementation {
+class EventLoopImplementationGtk final : public Core::EventLoopImplementation {
 public:
-    static NonnullOwnPtr<EventLoopImplementationGLib> create() { return adopt_own(*new EventLoopImplementationGLib); }
+    static NonnullOwnPtr<EventLoopImplementationGtk> create() { return adopt_own(*new EventLoopImplementationGtk); }
 
-    virtual ~EventLoopImplementationGLib() override;
+    virtual ~EventLoopImplementationGtk() override;
 
     virtual int exec() override;
     virtual size_t pump(PumpMode) override;
@@ -55,9 +56,9 @@ public:
     void set_main_loop() { dbgln("GLib Event Loop only supports being main!"); }
 
 private:
-    friend class EventLoopManagerGLib;
+    friend class EventLoopManagerGtk;
 
-    EventLoopImplementationGLib();
+    EventLoopImplementationGtk();
     bool is_main_loop() const { return true; }
 
     GMainLoop *m_event_loop;

@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2022-2023, Andreas Kling <kling@serenityos.org>
  * Copyright (c) 2023, Linus Groh <linusg@serenityos.org>
+ * Copyright (c) 2023, Matthew Jakeman <mattjakemandev@gmail.com>
  *
  * SPDX-License-Identifier: BSD-2-Clause
  */
