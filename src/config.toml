@@ -1,0 +1,27 @@
+[library]
+description = "LibWeb GTK"
+authors = "Matthew Jakeman"
+license = "BSD 2-Clause"
+browse_url = "https://github.com/mjakeman/libweb-gtk"
+repository_url = "https://github.com/mjakeman/libweb-gtk.git"
+website_url = "https://github.com/mjakeman/libweb-gtk"
+dependencies = [
+    "GObject-2.0",
+    "Gtk-4.0",
+    "Soup-3.0"
+]
+
+[dependencies."GObject-2.0"]
+name = "GObject"
+description = "The base type system library"
+docs_url = "https://docs.gtk.org/gobject/"
+
+[dependencies."Gtk-4.0"]
+name = "Gtk"
+description = "The GTK toolkit"
+docs_url = "https://docs.gtk.org/gtk4/"
+
+[dependencies."Soup-3.0"]
+name = "Soup"
+description = "HTTP client/server library for GNOME"
+docs_url = "https://libsoup.org/libsoup-3.0/"
