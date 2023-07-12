@@ -36,31 +36,26 @@ struct ThreadData {
 
 EventLoopImplementationGtk::EventLoopImplementationGtk()
 {
-    dbgln("INTEGRATION {} Create", getpid());
 //    m_event_loop = g_main_loop_new(nullptr, FALSE);
 }
 
 EventLoopImplementationGtk::~EventLoopImplementationGtk()
 {
-    dbgln("INTEGRATION {} Delete", getpid());
 //    g_main_loop_unref(m_event_loop);
 }
 
 int EventLoopImplementationGtk::exec()
 {
-    dbgln("INTEGRATION {} Exec", getpid());
 //    g_main_loop_run(m_event_loop);
     GMainContext *context = g_main_context_default();
     while (true)
         g_main_context_iteration(context, TRUE);
-    dbgln("Context Grabbed: {}", context);
     return m_error_code;
 }
 
 size_t EventLoopImplementationGtk::pump(PumpMode mode)
 {
     VERIFY_NOT_REACHED();
-    dbgln("INTEGRATION {} Pump", getpid());
     auto result = Core::ThreadEventQueue::current().process();
     if (mode == PumpMode::WaitForEvents) {
 //        g_main_context_iteration(g_main_loop_get_context(m_event_loop), TRUE);
@@ -73,7 +68,6 @@ size_t EventLoopImplementationGtk::pump(PumpMode mode)
 void EventLoopImplementationGtk::quit(int code)
 {
     VERIFY_NOT_REACHED();
-    dbgln("INTEGRATION {} Quit", getpid());
     m_error_code = code;
 //    g_main_loop_quit(m_event_loop);
 }
@@ -82,7 +76,6 @@ void EventLoopImplementationGtk::wake() {}
 
 void EventLoopImplementationGtk::post_event(Core::Object& receiver, NonnullOwnPtr<Core::Event>&& event)
 {
-    dbgln("INTEGRATION {} Post event", getpid());
     // Can we have multithreaded event queues?
     m_thread_event_queue.post_event(receiver, move(event));
     if (&m_thread_event_queue != &Core::ThreadEventQueue::current())
@@ -91,7 +84,6 @@ void EventLoopImplementationGtk::post_event(Core::Object& receiver, NonnullOwnPt
 
 static void glib_timer_fired(int timer_id, Core::TimerShouldFireWhenNotVisible should_fire_when_not_visible, Core::Object& object)
 {
-    dbgln("INTEGRATION {} Timer fired", getpid());
     if (should_fire_when_not_visible == Core::TimerShouldFireWhenNotVisible::No) {
         if (!object.is_visible_for_timer_purposes())
             return;
@@ -102,7 +94,6 @@ static void glib_timer_fired(int timer_id, Core::TimerShouldFireWhenNotVisible s
 
 int EventLoopManagerGtk::register_timer(Core::Object& object, int milliseconds, bool should_reload, Core::TimerShouldFireWhenNotVisible should_fire_when_not_visible)
 {
-    dbgln("INTEGRATION {} Register timer", getpid());
     auto& thread_data = ThreadData::the();
 
     auto timer_id = thread_data.timer_id_allocator.allocate();
@@ -119,14 +110,11 @@ int EventLoopManagerGtk::register_timer(Core::Object& object, int milliseconds, 
     source->attach(Glib::MainContext::get_default());
     thread_data.timers.set(timer_id, move(source));
 
-    // dbgln("Registered timer (id={}, object={}, ms={}, reload={}, fire_not_vis={})", timer_id, &object, milliseconds, should_reload, (int)should_fire_when_not_visible);
-
     return timer_id;
 }
 
 bool EventLoopManagerGtk::unregister_timer(int timer_id)
 {
-    dbgln("INTEGRATION {} Unregister timer", getpid());
     auto& thread_data = ThreadData::the();
     thread_data.timer_id_allocator.deallocate(timer_id);
 
@@ -135,14 +123,11 @@ bool EventLoopManagerGtk::unregister_timer(int timer_id)
         timer->get()->destroy();
     }
 
-    // dbgln("Unregistered timer (timer_id={})", timer_id);
-
     return thread_data.timers.remove(timer_id);
 }
 
 void EventLoopManagerGtk::register_notifier(Core::Notifier& notifier)
 {
-    dbgln("INTEGRATION {} Register notifier", getpid());
     Glib::IOCondition condition;
     switch (notifier.type()) {
     case Core::Notifier::Type::Read:
@@ -185,13 +170,11 @@ void EventLoopManagerGtk::register_notifier(Core::Notifier& notifier)
     io_watch->attach(Glib::MainContext::get_default());
 
     // Store watch ID for later
-    // dbgln("Added notifier (key={}, value={})", &notifier, (int)watch_id);
-    ThreadData::the().notifiers.set(&notifier, move(io_watch));
+    // ThreadData::the().notifiers.set(&notifier, move(io_watch));
 }
 
 void EventLoopManagerGtk::unregister_notifier(Core::Notifier& notifier)
 {
-    dbgln("INTEGRATION {} Unregister notifier", getpid());
     auto thread_data = ThreadData::the();
 
     auto watch = thread_data.notifiers.get(&notifier);
@@ -213,7 +196,6 @@ void cb_process_events2() {
 
 void EventLoopManagerGtk::did_post_event()
 {
-    dbgln("INTEGRATION {} Posted event", getpid());
     g_timeout_add_once(0, reinterpret_cast<GSourceOnceFunc>(cb_process_events2), nullptr);
 }
 

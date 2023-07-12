@@ -14,7 +14,8 @@ set(SOURCES
         #    SettingsDialog.cpp
         #    Tab.cpp
         Utilities.cpp
-        WebContentView.cpp
+#        WebContentView.cpp
+        ContentViewImpl.cpp
 
         Embed/webcontentview.cpp
         Embed/webembed.cpp
