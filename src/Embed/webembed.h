@@ -10,7 +10,7 @@
 extern "C" {
 #endif
 
-void webembed_init();
+void web_embed_init();
 
 #ifdef __cplusplus
 }

@@ -60,7 +60,7 @@ int main(int argc, char **argv)
     app = gtk_application_new("com.mattjakeman.LibWebGTK", G_APPLICATION_DEFAULT_FLAGS);
 
     gtk_init();
-    webembed_init();
+    web_embed_init();
 
     g_signal_connect(app, "activate", G_CALLBACK (on_activate), NULL);
 

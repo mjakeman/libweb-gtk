@@ -46,7 +46,7 @@ static ErrorOr<void> handle_attached_debugger()
 
 std::unique_ptr<Core::EventLoop> event_loop_ptr;
 
-void webembed_init()
+void web_embed_init()
 {
     gtk_init();
     Gtk::init_gtkmm_internals();
